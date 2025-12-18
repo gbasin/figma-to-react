@@ -1,0 +1,26 @@
+{
+  "name": "figma-to-react",
+  "owner": {
+    "name": "Gary Basin",
+    "email": "gary@gbasin.com"
+  },
+  "metadata": {
+    "description": "Claude Code plugin for converting Figma flows to React components",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "figma-to-react",
+      "source": "./",
+      "description": "Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS, iOS-native animations, and automated visual verification",
+      "version": "1.0.0",
+      "author": {
+        "name": "Gary Basin"
+      },
+      "repository": "https://github.com/gbasin/figma-to-react",
+      "license": "MIT",
+      "keywords": ["figma", "react", "tailwind", "design-to-code", "ios", "mobile"],
+      "category": "design"
+    }
+  ]
+}

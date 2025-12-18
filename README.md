@@ -28,8 +28,11 @@ Before using this plugin, ensure you have:
 ## Installation
 
 ```bash
-# Install directly from GitHub
-/plugin install github:garybasin/figma-to-react
+# Add the marketplace
+/plugin marketplace add gbasin/figma-to-react
+
+# Install the plugin
+/plugin install figma-to-react
 ```
 
 ## Usage
