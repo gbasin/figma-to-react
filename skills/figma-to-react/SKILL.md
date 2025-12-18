@@ -776,7 +776,7 @@ bun x tsx scripts/verify-screen.ts welcome tmp/welcome.png http://localhost:5173
 bun x tsx scripts/verify-screen.ts select-bank tmp/select-bank.png http://localhost:5173/plaid
 ```
 
-**For dev-browser skill:** Use the skill's built-in tools directly instead of bash scripts when possible. The skill should expose navigation and screenshot capabilities that don't require bash.
+**Note:** dev-browser works through bash scripts (not MCP tools), so the reusable script pattern above is the recommended approach.
 
 ### Process
 
