@@ -748,12 +748,16 @@ Use the configured browser tool to verify each screen matches Figma pixel-perfec
 
 ### IMPORTANT: Avoid Repeated Permission Prompts
 
-**Problem:** Generating unique inline scripts for each verification step requires permission every time, breaking autonomous flow.
+**Problem:** Each unique inline `<<'EOF'` script is a different command, requiring permission every time — even if `Bash(bun x tsx:*)` is allowed. This breaks autonomous flow.
 
-**Solution:** Write a reusable verification script ONCE, then call it with arguments:
+**Why:** Claude Code permissions are "per project directory and command". Different heredoc content = different command = new permission prompt.
+
+**Solution:** Write a reusable script file ONCE, then call it with arguments. Same command pattern = auto-approved after first run.
+
+**Step 1:** At the start of Phase 8, create this script:
 
 ```typescript
-// scripts/verify-screen.ts (create once at start of Phase 8)
+// scripts/verify-screen.ts
 import { connect, waitForPageLoad } from "@/client.js";
 
 const [screenId, outputPath, baseUrl] = process.argv.slice(2);
@@ -769,14 +773,20 @@ await page.screenshot({ path: outputPath });
 await client.disconnect();
 ```
 
-Then call with same command pattern (auto-approved after first run):
+**Step 2:** Call with arguments (same command pattern each time):
+
 ```bash
-# Same command structure = same permission = auto-approved
+# First call - requires permission
 bun x tsx scripts/verify-screen.ts welcome tmp/welcome.png http://localhost:5173/plaid
+
+# Subsequent calls - auto-approved (same script, different args)
 bun x tsx scripts/verify-screen.ts select-bank tmp/select-bank.png http://localhost:5173/plaid
+bun x tsx scripts/verify-screen.ts credentials tmp/credentials.png http://localhost:5173/plaid
 ```
 
-**Note:** dev-browser works through bash scripts (not MCP tools), so the reusable script pattern above is the recommended approach.
+**Why this works:** The command `bun x tsx scripts/verify-screen.ts` is the same each time. Claude Code recognizes it as the same executable with different arguments, so it reuses the permission from the first call.
+
+**DO NOT:** Generate inline `<<'EOF'` scripts in a loop — each one prompts for permission.
 
 ### Process
 
