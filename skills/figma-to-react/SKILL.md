@@ -42,6 +42,43 @@ Gather ALL configuration upfront before starting work. Use `AskUserQuestion` for
 | 7 | **Container mode** | Infer from Figma (phone bezel = phone-frame, modal chrome = modal) |
 | 8 | **Brand substitutions** | Scan package.json, README, existing components for company/bank names |
 | 9 | **Browser tool** | Default: `dev-browser`. Options: `dev-browser`, `playwright`, `puppeteer`, or skip verification |
+| 10 | **Dev server command** | Auto-detect (see below) |
+| 11 | **Dev server URL** | Auto-detect (see below) |
+
+### Dev Server Detection
+
+Before asking the user, detect the dev server setup:
+
+```
+1. Check if server is ALREADY RUNNING:
+   - curl http://localhost:5173, :3000, :3001, :8080
+   - If responding, use that URL and skip starting server
+
+2. Detect package manager:
+   - pnpm-lock.yaml → pnpm
+   - yarn.lock → yarn
+   - package-lock.json → npm
+
+3. Detect dev script from package.json:
+   - scripts.dev → "{pm} dev"
+   - scripts.start → "{pm} start"
+   - scripts.serve → "{pm} serve"
+
+4. Detect port from config:
+   - vite.config.ts → server.port
+   - next.config.js → typically 3000
+   - package.json scripts → --port flag
+```
+
+**Present to user:**
+```
+Dev server detected:
+  Command:  pnpm dev
+  URL:      http://localhost:5173
+  Status:   Not running (will start automatically)
+
+  [Use detected] / [Customize] / [Already running at different URL]
+```
 
 ### Screen Node IDs
 
@@ -103,7 +140,8 @@ Configuration:
   Container:      phone-frame
   Company:        Usonia
   Bank:           Flagstar Bank
-  Browser tool:   dev-browser (default)
+  Browser tool:   dev-browser
+  Dev server:     pnpm dev → http://localhost:5173 (detected, not running)
 
 Proceed? [Y/n]
 ```

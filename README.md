@@ -64,6 +64,8 @@ The plugin will ask for configuration upfront (with auto-detected suggestions):
 | Container mode | `phone-frame`, `modal`, `fullscreen`, `none` | Figma frame analysis |
 | Brand substitutions | Company name, bank name | Project files |
 | Browser tool | `dev-browser`, `playwright`, `puppeteer`, `skip` | Default: `dev-browser` |
+| Dev server | Command to start dev server | Auto-detect from package.json |
+| Dev server URL | URL where dev server runs | Auto-detect (checks if already running) |
 
 ## Output
 
