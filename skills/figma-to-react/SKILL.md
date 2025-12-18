@@ -152,14 +152,29 @@ mcp__figma__get_design_context(fileKey, screenNodeId)
 
 ## Phase 3: Asset Handling
 
+### CRITICAL: Prefer SVG Over Raster
+
+> **Always export as SVG when the asset is vector-based.**
+>
+> | Asset Type | Format | Reason |
+> |------------|--------|--------|
+> | Icons | SVG | Scalable, tiny file size, crisp at any resolution |
+> | Logos | SVG | Scalable, often have transparency |
+> | Illustrations (vector) | SVG | Preserves paths, gradients, scalability |
+> | Photos / raster art | PNG/JPG | Already rasterized, SVG won't help |
+>
+> **How to tell:** In Figma, vector assets show paths/shapes in the layers panel. Raster assets show as embedded images.
+>
+> When `get_design_context` returns both SVG code AND an image URL for the same asset, **always use the SVG**.
+
 ### CRITICAL: Exact Assets Only
 
 > **NEVER approximate assets. NEVER substitute similar icons/images.**
 >
 > - **SVGs**: Copy EXACT SVG code from Figma. Embed inline or save as .svg
-> - **Images**: Download EXACT asset from Figma URL
+> - **Images**: Download EXACT asset from Figma URL (only for raster assets)
 > - **Icons**: Use PRECISE icon from Figma, not "close enough" from a library
-> - **Illustrations**: Must be the exact file
+> - **Illustrations**: Must be the exact file — prefer SVG if vector-based
 >
 > If an asset cannot be extracted, flag as TODO — do not substitute.
 
