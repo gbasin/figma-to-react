@@ -110,25 +110,6 @@ If no explicit node IDs provided, use `get_metadata` on the parent frame to disc
 - `fullscreen` — Screens fill the viewport, no chrome
 - `none` — Raw components only, user provides wrapper
 
-### Auto-detection Examples
-
-```typescript
-// Detect DeviceFrame
-const frameFiles = await glob('**/DeviceFrame.tsx', '**/PhoneFrame.tsx', '**/IPhoneFrame.tsx');
-if (frameFiles.length > 0) {
-  suggest(frameFiles[0]); // Offer first match, let user confirm/override
-}
-
-// Detect brand from package.json
-const pkg = await read('package.json');
-const companyName = pkg.name.split('/')[0].replace('@', ''); // e.g., "@usonia/app" -> "usonia"
-
-// Detect container mode from Figma
-// If Figma frame has iPhone bezel/notch elements -> phone-frame
-// If Figma frame has modal backdrop/overlay -> modal
-// Otherwise -> fullscreen
-```
-
 ### Present Configuration for Confirmation
 
 Before proceeding, show the user:
@@ -261,28 +242,6 @@ For each asset (can parallelize):
         - GIVE UP: Flag as TODO, note what went wrong
 ```
 
-### Asset Verification HTML Template
-
-```html
-<!-- Temporary page for asset verification -->
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { margin: 0; padding: 20px; background: white; }
-    img, svg { display: block; }
-  </style>
-</head>
-<body>
-  <!-- For images -->
-  <img src="/flow-assets/asset-name.png" />
-
-  <!-- For SVGs (inline) -->
-  <svg width="24" height="24" viewBox="0 0 24 24">...</svg>
-</body>
-</html>
-```
-
 ### Verification Criteria
 
 | Asset Type | Check |
@@ -305,77 +264,20 @@ When the design uses component variants (e.g., bank chips, icon variants, themed
 
 **Detection:** Asset verification will catch this — the downloaded asset won't match the Figma screenshot.
 
-### CRITICAL: Screenshot Extraction Guardrails
-
-> **NEVER silently fall back to screenshot extraction.**
->
-> Screenshot extraction (cropping assets from full-screen screenshots) is a **LAST RESORT** that:
-> - Introduces compression artifacts
-> - Loses vector fidelity (SVGs become raster)
-> - May have incorrect dimensions
-> - Cannot be scaled without quality loss
->
-> **Rules:**
-> 1. **NEVER use screenshot extraction for SVGs** — flag as TODO instead
-> 2. **NEVER auto-extract without explicit user consent** — always ask first
-> 3. **Prefer TODO over screenshot extraction** — let user export manually
-> 4. **If user approves screenshot extraction, mark asset clearly** in output summary
-
-**Fallback Strategy (ask user):**
-
-```
-Asset verification FAILED for "bank-chip-chase.png"
-  - Downloaded: Wells Fargo logo (base variant)
-  - Expected: Chase logo (from screenshot)
-
-This appears to be a Figma component variant issue.
-
-Options:
-1. Provide Figma API token → I'll call REST API directly:
-   GET /v1/images/{fileKey}?ids={nodeId}&format=png
-   (Recommended - preserves full quality)
-
-2. Flag as TODO → Skip this asset, add TODO comment in code
-   You can export manually from Figma later
-   (Safe choice if you don't have API token)
-
-3. Manual export now → Export this asset from Figma desktop app
-   and save to: public/plaid-assets/bank-chip-chase.png
-   (Best quality, requires manual step)
-
-4. Screenshot extraction (NOT RECOMMENDED) → I'll crop from
-   the full screen screenshot
-   ⚠️  WARNING: Lower fidelity, compression artifacts, not scalable
-   ⚠️  BLOCKED for SVG assets - vectors cannot be extracted this way
-
-Which approach? [1/2/3/4]
-```
-
-**If user chooses screenshot extraction (option 4):**
-- Confirm again: "Screenshot extraction will produce a lower-quality raster image. Are you sure? [y/N]"
-- If SVG asset: "Screenshot extraction is not available for SVG assets. Flagging as TODO instead."
-- Mark in output: `bank-chip-chase.png  ⚠️ DEGRADED (screenshot extract)`
-
 ### Asset Extraction Priority
 
-Always attempt in this order:
+When an asset fails to extract correctly, try in this order:
+
 1. **Direct extraction** via `get_design_context` SVG/image URL
-2. **Figma REST API** (if user provides token)
-3. **Manual export** (ask user to export from Figma)
-4. **Flag as TODO** (default if above fail)
-5. **Screenshot extraction** (only if user explicitly requests AND asset is not SVG)
+2. **Figma REST API** — ask user for token, then: `curl -H "X-Figma-Token: {token}" "https://api.figma.com/v1/images/{fileKey}?ids={nodeId}&format=png&scale=2"`
+3. **Manual export** — ask user to export from Figma desktop
+4. **Flag as TODO** — default if above fail
+5. **Screenshot extraction** — LAST RESORT, only if user explicitly approves AND asset is NOT an SVG
 
-**If user provides API token:**
-```bash
-curl -H "X-Figma-Token: {token}" \
-  "https://api.figma.com/v1/images/{fileKey}?ids={nodeId}&format=png&scale=2"
-```
-
-**If using screenshot extraction:**
-- Get full screen screenshot from `get_screenshot`
-- Identify asset bounding box from design context metadata
-- Crop the region to extract the asset
-- Note: May have compression artifacts, but visually correct
+> **Screenshot extraction rules:**
+> - NEVER use for SVGs (vectors become raster)
+> - NEVER auto-extract without asking user first
+> - Always mark in output: `⚠️ DEGRADED (screenshot extract)`
 
 ### Asset Verification Output
 
@@ -467,161 +369,30 @@ Generate these files FIRST (sequential, establishes structure):
 
 ### 4.1: Registry (`screens/registry.ts`)
 
-```typescript
-import type { ComponentType } from 'react';
-
-export interface ScreenProps {
-  onNext?: () => void;
-  onBack?: () => void;
-  onClose?: () => void;
-}
-
-export interface Screen {
-  id: string;
-  title: string;
-  component: ComponentType<ScreenProps>;
-}
-
-// Import screen components
-import { WelcomeScreen } from './components/WelcomeScreen';
-import { SelectBankScreen } from './components/SelectBankScreen';
-// ... more imports
-
-export const screens: Screen[] = [
-  { id: 'welcome', title: 'Welcome', component: WelcomeScreen },
-  { id: 'select-bank', title: 'Select Bank', component: SelectBankScreen },
-  // ... more screens
-];
-
-export const screenFlow: string[] = ['welcome', 'select-bank', /* ... */];
-
-export function getScreenById(id: string): Screen | undefined {
-  return screens.find(s => s.id === id);
-}
-
-export function getNextScreenId(currentId: string): string | null {
-  const index = screenFlow.indexOf(currentId);
-  return index >= 0 && index < screenFlow.length - 1
-    ? screenFlow[index + 1]
-    : null;
-}
-
-export function getPrevScreenId(currentId: string): string | null {
-  const index = screenFlow.indexOf(currentId);
-  return index > 0 ? screenFlow[index - 1] : null;
-}
-```
+- Export `ScreenProps` interface with `onNext`, `onBack`, `onClose` callbacks
+- Export `Screen` interface with `id`, `title`, `component`
+- Export `screens` array and `screenFlow` order
+- Export helper functions: `getScreenById`, `getNextScreenId`, `getPrevScreenId`
 
 ### 4.2: Demo Page (`{Flow}DemoPage.tsx`)
 
-Must support direct screen access via URL params for parallel verification:
-
-```typescript
-import { useState, useEffect } from 'react';
-import { screens, screenFlow, getScreenById, getNextScreenId, getPrevScreenId } from './screens/registry';
-import { DeviceFrame } from '@/components/DeviceFrame'; // or create new
-
-export function PlaidDemoPage() {
-  // Support direct screen access: /plaid?screen=select-bank
-  const searchParams = new URLSearchParams(window.location.search);
-  const directScreen = searchParams.get('screen');
-
-  const [currentScreenId, setCurrentScreenId] = useState(
-    directScreen && screenFlow.includes(directScreen)
-      ? directScreen
-      : screenFlow[0]
-  );
-
-  const currentScreen = getScreenById(currentScreenId);
-  if (!currentScreen) return null;
-
-  const CurrentComponent = currentScreen.component;
-
-  const handleNext = () => {
-    const next = getNextScreenId(currentScreenId);
-    if (next) setCurrentScreenId(next);
-  };
-
-  const handleBack = () => {
-    const prev = getPrevScreenId(currentScreenId);
-    if (prev) setCurrentScreenId(prev);
-  };
-
-  const handleClose = () => {
-    // Navigate away or reset flow
-    setCurrentScreenId(screenFlow[0]);
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8">
-      {/* Container based on mode */}
-      <DeviceFrame>
-        <div className="relative w-full h-full overflow-hidden">
-          <CurrentComponent
-            onNext={handleNext}
-            onBack={handleBack}
-            onClose={handleClose}
-          />
-        </div>
-      </DeviceFrame>
-
-      {/* Optional: Flow progress sidebar */}
-      <div className="ml-8 space-y-2">
-        {screens.map((screen, i) => (
-          <button
-            key={screen.id}
-            onClick={() => setCurrentScreenId(screen.id)}
-            className={`block text-left px-3 py-1 rounded ${
-              screen.id === currentScreenId
-                ? 'bg-blue-500 text-white'
-                : 'text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {i + 1}. {screen.title}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+**Must support direct screen access via URL params** for parallel verification:
 ```
+/{flow}?screen={screenId}
+```
+
+- Read `?screen=` param to allow direct navigation
+- Render current screen component with `onNext`/`onBack`/`onClose` handlers
+- Wrap in DeviceFrame (if container mode requires it)
+- Optional: sidebar showing all screens for easy navigation
 
 ### 4.3: DeviceFrame Component (if needed)
 
-```typescript
-import type { ReactNode } from 'react';
-
-interface DeviceFrameProps {
-  children: ReactNode;
-}
-
-export function DeviceFrame({ children }: DeviceFrameProps) {
-  return (
-    <div className="relative">
-      {/* iPhone 14 Pro frame */}
-      <div className="w-[390px] h-[844px] bg-black rounded-[55px] p-[14px] shadow-2xl">
-        <div className="relative w-full h-full bg-white rounded-[41px] overflow-hidden">
-          {/* Status bar */}
-          <div className="absolute top-0 left-0 right-0 h-[47px] flex items-center justify-between px-8 z-50">
-            <span className="text-sm font-semibold">9:41</span>
-            <div className="flex items-center gap-1">
-              {/* Signal, WiFi, Battery icons */}
-            </div>
-          </div>
-
-          {/* Dynamic Island */}
-          <div className="absolute top-[11px] left-1/2 -translate-x-1/2 w-[126px] h-[37px] bg-black rounded-full z-50" />
-
-          {/* Content */}
-          <div className="pt-[47px] h-full">
-            {children}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-```
+For `phone-frame` container mode, create iPhone 14 Pro frame:
+- 390x844 viewport
+- Black bezel with rounded corners
+- Status bar (9:41, signal, wifi, battery)
+- Dynamic Island
 
 ---
 
@@ -741,89 +512,27 @@ const [enabled, setEnabled] = useState(false);
 
 ## Phase 6: iOS-Native Animations
 
-Apply iOS-native animation curves from Ionic Framework's iOS implementation.
+### Animation Curves
 
-### Tailwind Config Extension
+| Transition | Curve | Duration |
+|------------|-------|----------|
+| Navigation (push/pop) | `cubic-bezier(0.36, 0.66, 0.04, 1)` | 500ms |
+| Modal (present/dismiss) | `cubic-bezier(0.32, 0.72, 0, 1)` | 500ms |
+| Button press | `ease-out` | 100ms |
 
-```javascript
-// tailwind.config.js
-module.exports = {
-  theme: {
-    extend: {
-      transitionTimingFunction: {
-        'ios-spring': 'cubic-bezier(0.36, 0.66, 0.04, 1)',
-        'ios-modal': 'cubic-bezier(0.32, 0.72, 0, 1)',
-      },
-    }
-  }
-}
-```
+### Implementation
 
-### Animation Implementation
+- **Forward nav:** Screen slides in from right (`translateX(100%) → 0`)
+- **Back nav:** Screen slides out to right, previous screen from `translateX(-33%) → 0`
+- **Button press:** `active:scale-[0.97] transition-transform duration-100`
 
-| Trigger | Animation | CSS |
-|---------|-----------|-----|
-| Navigate forward | Slide from right | `transform: translateX(100%) → translateX(0)`<br>`transition: transform 500ms cubic-bezier(0.36, 0.66, 0.04, 1)` |
-| Navigate back | Slide to right | Previous screen: `translateX(-33%) → translateX(0)` |
-| Modal open | Slide up | `transform: translateY(100%) → translateY(0)`<br>`transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1)` |
-| Modal close | Slide down | Same curve, reversed |
-| Button press | Scale | `active:scale-[0.97]`<br>`transition: transform 100ms ease-out` |
-
-### Screen Transition Component
-
-```typescript
-import { useState, useEffect, type ReactNode } from 'react';
-
-interface ScreenTransitionProps {
-  children: ReactNode;
-  direction: 'forward' | 'back' | 'none';
-}
-
-export function ScreenTransition({ children, direction }: ScreenTransitionProps) {
-  const [isEntering, setIsEntering] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsEntering(false), 50);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const getTransform = () => {
-    if (!isEntering) return 'translateX(0)';
-    if (direction === 'forward') return 'translateX(100%)';
-    if (direction === 'back') return 'translateX(-100%)';
-    return 'translateX(0)';
-  };
-
-  return (
-    <div
-      style={{
-        transform: getTransform(),
-        transition: 'transform 500ms cubic-bezier(0.36, 0.66, 0.04, 1)',
-      }}
-      className="absolute inset-0"
-    >
-      {children}
-    </div>
-  );
-}
-```
+Optionally add to Tailwind config: `'ios-spring': 'cubic-bezier(0.36, 0.66, 0.04, 1)'`
 
 ---
 
 ## Phase 7: Add Route
 
-Add the new flow to the app router:
-
-```typescript
-// App.tsx or router config
-import { PlaidDemoPage } from './plaid/PlaidDemoPage';
-
-// Add route
-<Route path="/plaid" element={<PlaidDemoPage />} />
-
-// Add navigation link (if applicable)
-<Link to="/plaid">Plaid Demo</Link>
-```
+Add route to app router: `<Route path="/{flow}" element={<{Flow}DemoPage />} />`
 
 ---
 
@@ -1005,33 +714,3 @@ Direct screen access: /plaid?screen={screenId}
 - Flag degraded assets clearly in output
 - Prefer TODO over low-quality extraction
 - Explain why asset failed and what user can do
-
----
-
-## Quick Reference
-
-### Figma MCP Tools
-
-```
-mcp__figma__get_metadata(fileKey, nodeId)     → Screen structure
-mcp__figma__get_screenshot(fileKey, nodeId)   → Visual reference
-mcp__figma__get_design_context(fileKey, nodeId) → Code + assets
-```
-
-### iOS Animation Curves
-
-```css
-/* Navigation push/pop */
-cubic-bezier(0.36, 0.66, 0.04, 1) /* 500ms */
-
-/* Modal present/dismiss */
-cubic-bezier(0.32, 0.72, 0, 1) /* 500ms */
-```
-
-### Screen URL Pattern
-
-```
-/{flow}?screen={screenId}
-```
-
-See [GUIDES.md](./GUIDES.md) for detailed examples and troubleshooting.
