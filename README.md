@@ -28,11 +28,8 @@ Before using this plugin, ensure you have:
 ## Installation
 
 ```bash
-# Add the plugin marketplace (if not already added)
-/plugin marketplace add your-org/claude-plugins
-
-# Install the plugin
-/plugin install figma-to-react
+# Install directly from GitHub
+/plugin install github:garybasin/figma-to-react
 ```
 
 ## Usage
