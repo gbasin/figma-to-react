@@ -21,7 +21,9 @@ Before using this plugin, ensure you have:
    mcp__figma__whoami
    ```
 
-2. **dev-browser Skill** available for visual verification
+2. **Browser automation** for visual verification (configurable)
+   - Default: `dev-browser` skill
+   - Alternatives: `playwright`, `puppeteer`, or skip verification
 
 3. **React + Tailwind CSS** project with a runnable dev server
 
@@ -61,6 +63,7 @@ The plugin will ask for configuration upfront (with auto-detected suggestions):
 | DeviceFrame | Existing component or create new | Glob search |
 | Container mode | `phone-frame`, `modal`, `fullscreen`, `none` | Figma frame analysis |
 | Brand substitutions | Company name, bank name | Project files |
+| Browser tool | `dev-browser`, `playwright`, `puppeteer`, `skip` | Default: `dev-browser` |
 
 ## Output
 
