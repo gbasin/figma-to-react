@@ -1,0 +1,72 @@
+{
+  "$schema": "https://claude.ai/schemas/plugin-marketplace-v1.json",
+  "name": "figma-to-react",
+  "displayName": "Figma to React",
+  "version": "1.0.0",
+  "description": "Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS, iOS-native animations, and automated visual verification",
+  "author": {
+    "name": "Gary Basin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/garybasin/figma-to-react"
+  },
+  "license": "MIT",
+  "keywords": [
+    "figma",
+    "react",
+    "tailwind",
+    "design-to-code",
+    "ios",
+    "mobile",
+    "components",
+    "ui",
+    "design-system",
+    "pixel-perfect"
+  ],
+  "categories": [
+    "design",
+    "frontend",
+    "code-generation"
+  ],
+  "requirements": {
+    "mcpServers": [
+      {
+        "name": "figma",
+        "description": "Figma MCP server for accessing design files",
+        "required": true
+      }
+    ],
+    "skills": [
+      {
+        "name": "dev-browser",
+        "description": "Browser automation for visual verification",
+        "required": true
+      }
+    ],
+    "projectDependencies": [
+      "react",
+      "tailwindcss"
+    ]
+  },
+  "features": [
+    "Pixel-perfect Figma to React conversion",
+    "Exact asset extraction with verification",
+    "iOS-native animation curves (spring physics)",
+    "Interactive elements (inputs, toggles, buttons)",
+    "Automated visual verification with auto-fix",
+    "Parallel processing for speed",
+    "Direct screen access via URL params"
+  ],
+  "commands": {
+    "figma-to-react": {
+      "description": "Convert a Figma flow to React components",
+      "usage": "/figma-to-react <figma-url> [screen-node-ids...]"
+    }
+  },
+  "skills": {
+    "figma-to-react": {
+      "description": "Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS"
+    }
+  }
+}

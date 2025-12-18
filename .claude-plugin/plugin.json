@@ -1,0 +1,20 @@
+{
+  "name": "figma-to-react",
+  "version": "1.0.0",
+  "description": "Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS, iOS-native animations, and automated visual verification",
+  "author": {
+    "name": "Gary Basin"
+  },
+  "license": "MIT",
+  "keywords": [
+    "figma",
+    "react",
+    "tailwind",
+    "design-to-code",
+    "ios",
+    "mobile",
+    "components"
+  ],
+  "commands": "./commands/",
+  "skills": "./skills/"
+}
