@@ -247,6 +247,22 @@ When the design uses component variants (e.g., bank chips, icon variants, themed
 
 **Detection:** Asset verification will catch this — the downloaded asset won't match the Figma screenshot.
 
+### CRITICAL: Screenshot Extraction Guardrails
+
+> **NEVER silently fall back to screenshot extraction.**
+>
+> Screenshot extraction (cropping assets from full-screen screenshots) is a **LAST RESORT** that:
+> - Introduces compression artifacts
+> - Loses vector fidelity (SVGs become raster)
+> - May have incorrect dimensions
+> - Cannot be scaled without quality loss
+>
+> **Rules:**
+> 1. **NEVER use screenshot extraction for SVGs** — flag as TODO instead
+> 2. **NEVER auto-extract without explicit user consent** — always ask first
+> 3. **Prefer TODO over screenshot extraction** — let user export manually
+> 4. **If user approves screenshot extraction, mark asset clearly** in output summary
+
 **Fallback Strategy (ask user):**
 
 ```
@@ -259,15 +275,37 @@ This appears to be a Figma component variant issue.
 Options:
 1. Provide Figma API token → I'll call REST API directly:
    GET /v1/images/{fileKey}?ids={nodeId}&format=png
+   (Recommended - preserves full quality)
 
-2. Use screenshot extraction → I'll crop the asset region from
-   the full screen screenshot (may have lower fidelity)
+2. Flag as TODO → Skip this asset, add TODO comment in code
+   You can export manually from Figma later
+   (Safe choice if you don't have API token)
 
-3. Manual export → Export this asset from Figma desktop app
+3. Manual export now → Export this asset from Figma desktop app
    and save to: public/plaid-assets/bank-chip-chase.png
+   (Best quality, requires manual step)
 
-Which approach? [1/2/3]
+4. Screenshot extraction (NOT RECOMMENDED) → I'll crop from
+   the full screen screenshot
+   ⚠️  WARNING: Lower fidelity, compression artifacts, not scalable
+   ⚠️  BLOCKED for SVG assets - vectors cannot be extracted this way
+
+Which approach? [1/2/3/4]
 ```
+
+**If user chooses screenshot extraction (option 4):**
+- Confirm again: "Screenshot extraction will produce a lower-quality raster image. Are you sure? [y/N]"
+- If SVG asset: "Screenshot extraction is not available for SVG assets. Flagging as TODO instead."
+- Mark in output: `bank-chip-chase.png  ⚠️ DEGRADED (screenshot extract)`
+
+### Asset Extraction Priority
+
+Always attempt in this order:
+1. **Direct extraction** via `get_design_context` SVG/image URL
+2. **Figma REST API** (if user provides token)
+3. **Manual export** (ask user to export from Figma)
+4. **Flag as TODO** (default if above fail)
+5. **Screenshot extraction** (only if user explicitly requests AND asset is not SVG)
 
 **If user provides API token:**
 ```bash
@@ -710,6 +748,9 @@ Asset Extraction & Verification:
   success-check.svg      PASS (verified: 64x64, paths complete)
   bank-illustration.png  PASS (verified: 200x150, colors match)
   search-icon.svg        PASS (verified: 24x24, strokes correct)
+  bank-chip.png          TODO (variant mismatch - manual export needed)
+  # If user approved screenshot extraction:
+  # bank-chip.png        ⚠️ DEGRADED (screenshot extract - may have artifacts)
 
 Screen Visual Verification:
   WelcomeScreen       PASS
@@ -717,8 +758,9 @@ Screen Visual Verification:
   CredentialsScreen   PASS
   SuccessScreen       PASS
 
-TODOs (1):
+TODOs (2):
   - SuccessScreen.tsx:78 — Font "SF Pro" not available, using Inter
+  - SelectBankScreen.tsx:45 — Asset "bank-chip.png" needs manual export from Figma
 
 Run: pnpm dev
 Visit: http://localhost:5173/plaid
@@ -731,14 +773,28 @@ Direct screen access: /plaid?screen={screenId}
 
 | Issue | Action |
 |-------|--------|
-| SVG extraction fails | Flag TODO with Figma node link |
+| SVG extraction fails | Flag TODO with Figma node link — **NEVER screenshot extract SVGs** |
 | Font not available | Use closest system font, flag TODO |
 | Complex gradient | Solid color approximation, flag TODO |
 | Asset URL 404 | Flag TODO, note which asset |
 | Animation in Figma | Note intended animation, flag TODO |
-| **Component variant mismatch** | Asset verification detects wrong variant → ask user for API token, screenshot crop, or manual export |
+| **Component variant mismatch** | Ask user: API token → manual export → TODO. Screenshot extraction only if explicitly approved for raster images |
+| **Any asset extraction failure** | Default to TODO, not screenshot extraction |
 
-**NEVER**: Approximate SVGs, substitute icons, use placeholder images.
+### Absolute Rules
+
+**NEVER**:
+- Approximate SVGs or substitute similar icons
+- Use placeholder images
+- Silently fall back to screenshot extraction
+- Screenshot-extract SVG assets (vectors cannot be rasterized without loss)
+- Auto-extract without asking user first
+
+**ALWAYS**:
+- Ask user before using screenshot extraction
+- Flag degraded assets clearly in output
+- Prefer TODO over low-quality extraction
+- Explain why asset failed and what user can do
 
 ---
 
