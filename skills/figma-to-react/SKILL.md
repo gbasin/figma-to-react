@@ -16,8 +16,9 @@ Before using this skill, ensure:
    - Test: `mcp__figma__whoami` should return your Figma user info
    - Tools used: `get_metadata`, `get_screenshot`, `get_design_context`
 
-2. **dev-browser Skill** is available
-   - Used for visual verification and screenshot comparison
+2. **Browser automation** for visual verification (configurable)
+   - Default: `dev-browser` skill
+   - Alternatives: `playwright`, `puppeteer`, or skip verification entirely
 
 3. **Project has React + Tailwind CSS**
    - Dev server runnable via `pnpm dev`, `npm run dev`, or similar
@@ -40,6 +41,7 @@ Gather ALL configuration upfront before starting work. Use `AskUserQuestion` for
 | 6 | **DeviceFrame component** | Glob for `**/DeviceFrame.tsx`, `**/PhoneFrame.tsx`, `**/IPhoneFrame.tsx` |
 | 7 | **Container mode** | Infer from Figma (phone bezel = phone-frame, modal chrome = modal) |
 | 8 | **Brand substitutions** | Scan package.json, README, existing components for company/bank names |
+| 9 | **Browser tool** | Default: `dev-browser`. Options: `dev-browser`, `playwright`, `puppeteer`, or skip verification |
 
 ### Screen Node IDs
 
@@ -101,6 +103,7 @@ Configuration:
   Container:      phone-frame
   Company:        Usonia
   Bank:           Flagstar Bank
+  Browser tool:   dev-browser (default)
 
 Proceed? [Y/n]
 ```
@@ -692,7 +695,18 @@ import { PlaidDemoPage } from './plaid/PlaidDemoPage';
 
 ## Phase 8: Visual Verification (Parallel)
 
-Use dev-browser to verify each screen matches Figma pixel-perfect.
+Use the configured browser tool to verify each screen matches Figma pixel-perfect.
+
+**If user chose "skip verification":** Skip this phase entirely, note in output summary.
+
+### Browser Tool Options
+
+| Tool | How to use |
+|------|------------|
+| `dev-browser` (default) | Use the dev-browser skill for navigation and screenshots |
+| `playwright` | Run `npx playwright` commands via Bash |
+| `puppeteer` | Run puppeteer scripts via Bash |
+| `skip` | Skip visual verification phase |
 
 ### Process
 
