@@ -746,6 +746,38 @@ Use the configured browser tool to verify each screen matches Figma pixel-perfec
 | `puppeteer` | Run puppeteer scripts via Bash |
 | `skip` | Skip visual verification phase |
 
+### IMPORTANT: Avoid Repeated Permission Prompts
+
+**Problem:** Generating unique inline scripts for each verification step requires permission every time, breaking autonomous flow.
+
+**Solution:** Write a reusable verification script ONCE, then call it with arguments:
+
+```typescript
+// scripts/verify-screen.ts (create once at start of Phase 8)
+import { connect, waitForPageLoad } from "@/client.js";
+
+const [screenId, outputPath, baseUrl] = process.argv.slice(2);
+
+const client = await connect();
+const page = await client.page("main");
+
+await page.goto(`${baseUrl}?screen=${screenId}`);
+await waitForPageLoad(page);
+await new Promise(r => setTimeout(r, 500));
+await page.screenshot({ path: outputPath });
+
+await client.disconnect();
+```
+
+Then call with same command pattern (auto-approved after first run):
+```bash
+# Same command structure = same permission = auto-approved
+bun x tsx scripts/verify-screen.ts welcome tmp/welcome.png http://localhost:5173/plaid
+bun x tsx scripts/verify-screen.ts select-bank tmp/select-bank.png http://localhost:5173/plaid
+```
+
+**For dev-browser skill:** Use the skill's built-in tools directly instead of bash scripts when possible. The skill should expose navigation and screenshot capabilities that don't require bash.
+
 ### Process
 
 ```
