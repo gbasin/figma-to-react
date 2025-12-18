@@ -71,6 +71,7 @@ The plugin will ask for configuration upfront (with auto-detected suggestions):
 
 ```
 src/{flow}/
+├── assets.ts              # Asset registry (type-safe imports)
 ├── screens/
 │   ├── registry.ts
 │   └── components/
@@ -82,6 +83,7 @@ src/{flow}/
     └── DeviceFrame.tsx (if created)
 
 public/{flow}-assets/
+├── manifest.json          # Asset manifest (tracks all assets)
 ├── logo.svg
 ├── icon-close.svg
 └── ...

@@ -386,7 +386,76 @@ Assets (5 total):
   search-icon.svg      FAIL → TODO: SVG gradient not rendering, needs manual fix
 ```
 
-Only proceed to Phase 4 after all critical assets pass verification (or are flagged as TODOs).
+### CRITICAL: Generate Asset Manifest & Registry
+
+**After extracting all assets, generate these files to prevent assets being forgotten during component generation:**
+
+#### 1. Asset Manifest (`public/{flow}-assets/manifest.json`)
+
+```json
+{
+  "generatedAt": "2024-01-15T10:30:00Z",
+  "basePath": "/plaid-assets",
+  "assets": {
+    "plaid-logo": {
+      "file": "plaid-logo.svg",
+      "path": "/plaid-assets/plaid-logo.svg",
+      "type": "svg",
+      "dimensions": { "width": 120, "height": 40 },
+      "screens": ["welcome"],
+      "status": "verified"
+    },
+    "flagstar-logo": {
+      "file": "flagstar-logo.png",
+      "path": "/plaid-assets/flagstar-logo.png",
+      "type": "png",
+      "dimensions": { "width": 80, "height": 32 },
+      "screens": ["select-bank", "credentials"],
+      "status": "verified"
+    },
+    "close-icon": {
+      "file": "close-icon.svg",
+      "path": "/plaid-assets/close-icon.svg",
+      "type": "svg",
+      "dimensions": { "width": 24, "height": 24 },
+      "screens": ["welcome", "select-bank", "credentials", "success"],
+      "status": "verified",
+      "inline": true
+    }
+  }
+}
+```
+
+#### 2. Asset Registry (`src/{flow}/assets.ts`)
+
+```typescript
+// Auto-generated asset registry - DO NOT EDIT MANUALLY
+// Generated from: public/plaid-assets/manifest.json
+
+export const assets = {
+  plaidLogo: '/plaid-assets/plaid-logo.svg',
+  flagstarLogo: '/plaid-assets/flagstar-logo.png',
+  closeIcon: '/plaid-assets/close-icon.svg',
+  successCheck: '/plaid-assets/success-check.svg',
+  bankIllustration: '/plaid-assets/bank-illustration.png',
+} as const;
+
+export type AssetKey = keyof typeof assets;
+
+// Inline SVGs (for icons that need color manipulation)
+export const inlineSvgs = {
+  closeIcon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>`,
+} as const;
+```
+
+**Why this matters:** Without these files, the agent may "forget" downloaded assets when generating components later. The registry creates a concrete import that components MUST use.
+
+Only proceed to Phase 4 after:
+1. All critical assets pass verification (or are flagged as TODOs)
+2. `manifest.json` is written
+3. `assets.ts` registry is generated
 
 ---
 
@@ -558,28 +627,40 @@ export function DeviceFrame({ children }: DeviceFrameProps) {
 
 Once core architecture is in place, generate each screen component IN PARALLEL.
 
+### CRITICAL: Read Asset Manifest First
+
+**Before generating ANY component, read the asset manifest:**
+
+```
+1. Read `public/{flow}-assets/manifest.json`
+2. For each screen, identify which assets it uses (from the `screens` field)
+3. Import from the asset registry, NOT hardcoded paths
+```
+
+### Component Template
+
 For each screen, create `screens/components/{ScreenName}.tsx`:
 
 ```typescript
 import type { ScreenProps } from '../registry';
+import { assets, inlineSvgs } from '../../assets';  // ALWAYS import from registry
 
 export function WelcomeScreen({ onNext, onBack, onClose }: ScreenProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header with close button */}
       <div className="flex items-center justify-between p-4">
-        <button onClick={onClose} className="p-2 active:scale-[0.97] transition-transform duration-100">
-          {/* Exact SVG from Figma */}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6L6 18M6 6l12 12" stroke="#111211" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
+        <button
+          onClick={onClose}
+          className="p-2 active:scale-[0.97] transition-transform duration-100"
+          dangerouslySetInnerHTML={{ __html: inlineSvgs.closeIcon }}
+        />
       </div>
 
       {/* Content - use exact Tailwind classes from Figma */}
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         <img
-          src="/plaid-assets/plaid-logo.svg"
+          src={assets.plaidLogo}  {/* USE REGISTRY, not hardcoded path */}
           alt="Plaid"
           className="w-[120px] h-[40px] mb-8"
         />
@@ -604,6 +685,19 @@ export function WelcomeScreen({ onNext, onBack, onClose }: ScreenProps) {
   );
 }
 ```
+
+### Asset Usage Rules
+
+| Asset Type | How to Use |
+|------------|------------|
+| Images (png/jpg) | `<img src={assets.assetName} />` |
+| SVG files | `<img src={assets.assetName} />` |
+| Inline SVGs (for color manipulation) | `dangerouslySetInnerHTML={{ __html: inlineSvgs.iconName }}` |
+
+**NEVER hardcode asset paths.** Always import from `assets.ts`. This ensures:
+1. Type safety (TypeScript will error if asset doesn't exist)
+2. Single source of truth (paths defined once)
+3. Assets can't be "forgotten" (import forces you to use what was extracted)
 
 ### Interactive Elements
 
