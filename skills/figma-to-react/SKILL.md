@@ -1,7 +1,9 @@
 ---
 name: figma-to-react
 description: Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS. Creates fully functional screens with iOS-native animations, interactive elements, and automated visual verification. Use when converting Figma mobile flows to React, building demo apps from designs, or replicating vendor UIs (like Plaid, Stripe, etc.). Requires figma MCP server and dev-browser skill.
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, WebFetch, mcp__figma__get_metadata, mcp__figma__get_screenshot, mcp__figma__get_design_context, AskUserQuestion
+license: MIT
+compatibility: Requires Figma MCP server with authentication, React project with Tailwind CSS, and optionally dev-browser/playwright/puppeteer for visual verification.
+allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch mcp__figma__get_metadata mcp__figma__get_screenshot mcp__figma__get_design_context AskUserQuestion
 ---
 
 # Figma to React Flow Conversion
