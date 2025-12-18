@@ -786,6 +786,11 @@ bun x tsx scripts/verify-screen.ts credentials tmp/credentials.png http://localh
 
 **Why this works:** The command `bun x tsx scripts/verify-screen.ts` is the same each time. Claude Code recognizes it as the same executable with different arguments, so it reuses the permission from the first call.
 
+**Iterating on the script:** If you need to change the verification logic (different selectors, wait times, click actions, etc.):
+1. **Edit** `scripts/verify-screen.ts` using the Edit tool
+2. **Re-run** the same command → still auto-approved (same command pattern)
+3. Repeat as needed — no new permission prompts
+
 **DO NOT:** Generate inline `<<'EOF'` scripts in a loop — each one prompts for permission.
 
 ### Process
