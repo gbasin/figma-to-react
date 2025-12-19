@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.3.0
+version: 1.3.1
 description: Convert Figma screen flows into React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). Node.js environment with React project.
@@ -146,6 +146,19 @@ export function MotionMobile2Screen({ onNext, onBack, onClose }: ScreenProps) {
 ```
 
 Derive component name from `data-name` attribute: `"Motion / Mobile 2"` → `MotionMobile2Screen`
+
+### Wire Up Navigation
+
+Identify interactive elements and connect them to navigation callbacks:
+
+| Element | Action |
+|---------|--------|
+| Back arrow / "←" icon | `onClick={onBack}` |
+| X / close icon | `onClick={onClose}` |
+| "Continue", "Next", "Get Started", primary CTA buttons | `onClick={onNext}` |
+| "Skip" links | `onClick={onNext}` (or custom handler) |
+
+Look for `data-name` hints like "Navigation Bar", "Back Button", "Close", "CTA Button" to identify these elements. Make buttons/icons clickable with `cursor-pointer` if not already.
 
 ## Step 6: Create Registry
 

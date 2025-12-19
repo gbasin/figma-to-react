@@ -45,9 +45,10 @@ fi
 echo "Collecting assets from $INPUT_COUNT screen(s)..." >&2
 
 # Extract all assets: varName|url (one per line)
+# Supports both figma.com URLs and localhost MCP server URLs
 > "$ASSET_LIST"
 for i in $(seq 0 $((INPUT_COUNT - 1))); do
-    perl -ne 'while (/const\s+(\w+)\s*=\s*"(https:\/\/www\.figma\.com\/api\/mcp\/asset\/[^"]+)"/g) { print "$1|$2\n"; }' \
+    perl -ne 'while (/const\s+(\w+)\s*=\s*"(https?:\/\/(?:www\.figma\.com\/api\/mcp\/asset|localhost:\d+\/assets)\/[^"]+)"/g) { print "$1|$2\n"; }' \
         "/tmp/figma-input-$$-$i.txt" >> "$ASSET_LIST"
 done
 
@@ -151,7 +152,7 @@ i=0
 while IFS= read -r ORIG_FILE; do
     INPUT_FILE="/tmp/figma-input-$$-$i.txt"
 
-    OUTPUT=$(perl -pe 's/^const\s+\w+\s*=\s*"https:\/\/www\.figma\.com\/api\/mcp\/asset\/[^"]+";?\s*\n?//gm' "$INPUT_FILE")
+    OUTPUT=$(perl -pe 's/^const\s+\w+\s*=\s*"https?:\/\/(?:www\.figma\.com\/api\/mcp\/asset|localhost:\d+\/assets)\/[^"]+";?\s*\n?//gm' "$INPUT_FILE")
 
     if [ -s "$SED_SCRIPT" ]; then
         OUTPUT=$(echo "$OUTPUT" | sed -f "$SED_SCRIPT")
