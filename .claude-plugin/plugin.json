@@ -1,5 +1,4 @@
 {
   "name": "figma-to-react",
-  "commands": "./commands/",
   "skills": "./skills/"
 }
