@@ -78,6 +78,7 @@ I've analyzed the Figma file and your project. Please confirm or adjust:
 │ Asset dir:      public/plaid-assets/                            │
 │ Device frame:   src/components/DeviceFrame.tsx (found)          │
 │ Container:      phone-frame (390x844 frames detected)           │
+│ Verification:   claude-in-chrome (detected, recommended)        │
 ├─────────────────────────────────────────────────────────────────┤
 │ SCREENS DETECTED (5)                                            │
 ├─────────────────────────────────────────────────────────────────┤
@@ -99,6 +100,7 @@ Options:
 - Exclude any screens?
 - Different screen order?
 - Override container mode?
+- Different verification tool? (claude-in-chrome | dev-browser | skip)
 
 ### Step 1.4: Create Manifest
 
@@ -119,7 +121,8 @@ Options:
     "outputDir": "src/plaid",
     "assetDir": "public/plaid-assets",
     "containerMode": "phone-frame",
-    "deviceFrame": "src/components/DeviceFrame.tsx"
+    "deviceFrame": "src/components/DeviceFrame.tsx",
+    "verificationTool": "claude-in-chrome"
   },
   "screens": [
     {
@@ -504,6 +507,9 @@ UPDATE manifest: ALL screens[].verification.status = "pending"
 ```
 READ manifest
 VERIFY phases.screens.status === "complete"
+CHECK config.verificationTool:
+  - IF "skip" → Skip to Phase 7, mark all verification as "skipped"
+  - IF "claude-in-chrome" or "dev-browser" → Continue
 IF NOT → STOP, complete Phase 5
 ```
 
@@ -511,14 +517,33 @@ IF NOT → STOP, complete Phase 5
 
 Ensure dev server is running.
 
-### Step 6.2: Verify Each Screen
+### Step 6.2: Initialize Browser Automation
+
+Based on `config.verificationTool`:
+
+**claude-in-chrome:**
+```
+1. Call mcp__claude-in-chrome__tabs_context_mcp to get/create tab group
+2. Create new tab with mcp__claude-in-chrome__tabs_create_mcp
+3. Use mcp__claude-in-chrome__navigate to load pages
+4. Use mcp__claude-in-chrome__computer with action="screenshot" for captures
+```
+
+**dev-browser:**
+```
+1. Invoke /dev-browser skill to start browser session
+2. Use dev-browser navigation and screenshot capabilities
+3. Follow dev-browser skill patterns for page interaction
+```
+
+### Step 6.3: Verify Each Screen
 
 For each screen in `manifest.screens`:
 
 ```
 1. Navigate to /{flow}?screen={registryId}
 2. Wait for render + asset loading
-3. Screenshot at device dimensions
+3. Screenshot at device dimensions (use configured tool)
 4. Compare against Figma screenshot (from extraction phase)
 
 5. IF discrepancies found:
@@ -534,7 +559,7 @@ For each screen in `manifest.screens`:
      Add issues to screens[i].verification.issues[]
 ```
 
-### Step 6.3: Complete Phase
+### Step 6.4: Complete Phase
 
 ```
 UPDATE manifest: phases.verification.status = "complete"
@@ -629,6 +654,7 @@ interface Manifest {
     assetDir: string;
     containerMode: 'phone-frame' | 'modal' | 'fullscreen' | 'none';
     deviceFrame: string | null;
+    verificationTool: 'claude-in-chrome' | 'dev-browser' | 'skip';
   };
   screens: Array<{
     order: number;
@@ -651,7 +677,7 @@ interface Manifest {
       status: 'blocked' | 'pending' | 'complete';
     };
     verification: {
-      status: 'blocked' | 'pending' | 'passed' | 'failed';
+      status: 'blocked' | 'pending' | 'passed' | 'failed' | 'skipped';
       attempts: number;
       passed: boolean;
       issues: string[];
