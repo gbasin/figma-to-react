@@ -93,6 +93,8 @@ For each screen node ID, call `mcp__figma__get_design_context(fileKey, nodeId)` 
 # /tmp/flow-screen-1.txt, /tmp/flow-screen-2.txt, etc.
 ```
 
+**Parallelization:** These calls are independent — extract all screens in parallel for faster processing.
+
 The response includes:
 - Full React/TypeScript code with Tailwind classes
 - Asset URLs as `const imgXxx = "https://www.figma.com/api/mcp/asset/..."`
@@ -149,6 +151,8 @@ export function MotionMobile2Screen({ onNext, onBack, onClose }: ScreenProps) {
 ```
 
 Derive component name from `data-name` attribute: `"Motion / Mobile 2"` → `MotionMobile2Screen`
+
+**Parallelization:** Component generation is independent per screen — generate all components in parallel.
 
 ### Wire Up Navigation
 
