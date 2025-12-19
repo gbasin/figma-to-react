@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.1
+version: 1.1.0
 description: Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS. Creates fully functional screens with iOS-native animations, interactive elements, and automated visual verification. Use when converting Figma mobile flows to React, building demo apps from designs, or replicating vendor UIs (like Plaid, Stripe, etc.).
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*) and dev-browser skill for visual verification. Node.js environment with React/Tailwind project.

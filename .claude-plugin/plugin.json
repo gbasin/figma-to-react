@@ -1,4 +1,5 @@
 {
   "name": "figma-to-react",
+  "version": "1.1.0",
   "skills": "./skills/"
 }
