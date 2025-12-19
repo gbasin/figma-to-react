@@ -18,7 +18,18 @@ This skill uses a **manifest file** as the single source of truth. The manifest:
 - Enforces phase gates (cannot proceed until prior phase complete)
 - Provides audit trail of what succeeded/failed
 
-**CRITICAL: Write the manifest FIRST, then update it as you progress. Never skip updating the manifest.**
+Write the manifest first, then update it as you progress. Never skip updating the manifest.
+
+### Real-Time Manifest Updates
+
+Update the manifest after each action, not in batches at the end.
+
+```
+Bad:  Extract all → Download all → Generate all → Update manifest once
+Good: Extract screen 1 → update manifest → Extract screen 2 → update manifest → ...
+```
+
+This allows recovery if the agent loses context, and gives the user visibility into progress.
 
 ---
 
@@ -213,13 +224,49 @@ For each screen in `manifest.screens`:
 
 2. Get design context:
    mcp__figma__get_design_context(fileKey, nodeId)
-   → Returns: Tailwind classes, asset URLs, SVG code
+
+   The response contains:
+   - React/Tailwind code with asset URLs as constants
+   - Component descriptions (e.g., "Source: boxicons --- icon, x, close")
+   - Design tokens (colors, typography)
+
    → UPDATE manifest: screens[i].extraction.designContext = "extracted"
    → UPDATE manifest: screens[i].extraction.status = "complete"
 
-3. Identify assets from design context:
-   → For each asset found, add to manifest.assets[] if not exists
-   → Add asset ID to screens[i].assetRefs[]
+3. Parse asset URLs from the code response
+
+   The Figma MCP embeds asset URLs like this:
+   ```javascript
+   const img = "https://www.figma.com/api/mcp/asset/16f61b3a-...";
+   const img1 = "https://www.figma.com/api/mcp/asset/62cda08c-...";
+   ```
+
+   For each asset URL found:
+   a. Extract the variable name (img, img1, img2, etc.)
+   b. Extract the URL
+   c. Infer asset type from component descriptions
+   d. Generate filename from description (e.g., "icon, x, close" → "close-icon.svg")
+   e. Add to manifest.assets[]:
+      ```json
+      {
+        "id": "close-icon",
+        "figma": {
+          "nodeId": "1:234",
+          "layerName": "icon, x, close",
+          "url": "https://www.figma.com/api/mcp/asset/16f61b3a-..."
+        },
+        "local": {
+          "fileName": "close-icon.svg",
+          "filePath": "public/plaid-assets/close-icon.svg",
+          "type": "svg"
+        },
+        "status": "pending",
+        "extractionMethod": null,
+        "failureReason": null,
+        "usedBy": ["WelcomeScreen"]
+      }
+      ```
+   f. Add asset ID to screens[i].assetRefs[]
 ```
 
 ### Step 2.2: Update Manifest
@@ -246,43 +293,44 @@ IF NOT → STOP, complete Phase 2
 
 ### Step 3.1: Download Each Asset
 
-For each asset in `manifest.assets`, try extraction methods in order until one succeeds:
+For each asset in `manifest.assets`:
 
 ```
-1. ATTEMPT: Direct extraction from design context
-   - SVGs: Copy EXACT SVG code
-   - Images: curl -L "{figmaUrl}" -o {localPath}
+1. Download from Figma MCP URL:
+   ```bash
+   curl -L "https://www.figma.com/api/mcp/asset/{uuid}" -o "{local.filePath}"
+   ```
+
+   Verify the file (size > 0, correct type).
 
    IF success:
      assets[i].status = "verified"
      assets[i].extractionMethod = "direct"
+     UPDATE manifest
      CONTINUE to next asset
 
-2. ATTEMPT: Figma REST API (if available)
+2. Fallback: Figma REST API (if MCP URL fails)
    curl -H "X-Figma-Token: {token}" \
      "https://api.figma.com/v1/images/{fileKey}?ids={nodeId}&format=png&scale=2"
 
    IF success:
      assets[i].status = "verified"
      assets[i].extractionMethod = "api"
-     CONTINUE to next asset
 
-3. ATTEMPT: Screenshot extraction (images only, not SVGs)
-   - Crop asset region from full screen screenshot
-   - Save to local path
+3. Fallback: Screenshot extraction (images only, not SVGs)
+   Crop asset region from full screen screenshot.
 
    IF success AND asset is NOT svg:
      assets[i].status = "degraded"
      assets[i].extractionMethod = "screenshot"
-     CONTINUE to next asset
 
-4. ALL METHODS FAILED:
+4. All methods failed:
    assets[i].status = "failed"
-   assets[i].failureReason = "All extraction methods failed: {details}"
+   assets[i].failureReason = "{details}"
    CONTINUE to next asset (don't stop)
 ```
 
-**Note:** If any assets get to step 2 (Figma REST API), stop and ask user if they can share a token before proceeding.
+If any assets need the Figma REST API, ask user for a token before proceeding.
 
 ### Step 3.2: Complete Phase
 
@@ -440,7 +488,7 @@ VERIFY files.registry.status === "complete"
 IF NOT → STOP, complete Phase 4
 ```
 
-### Step 5.1: Generate Each Screen (Parallel)
+### Step 5.1: Generate Each Screen (Sequential)
 
 For each screen in `manifest.screens`:
 
@@ -458,6 +506,23 @@ FOR assetId IN screen.assetRefs:
     → Add to screen's failedAssets list for summary
 ```
 
+**Replace Figma URLs with local paths**
+
+The Figma MCP returns code with remote URLs:
+```javascript
+const img = "https://www.figma.com/api/mcp/asset/16f61b3a-...";
+<img src={img} />
+```
+
+Replace these with local paths:
+```javascript
+<img src="/plaid-assets/close-icon.svg" />
+```
+
+Look up each asset in the manifest:
+- `manifest.assets[].figma.url` → the Figma URL in the code
+- `manifest.assets[].local.filePath` → the local path to use
+
 **Generate component with real assets or visible placeholders:**
 
 ```typescript
@@ -469,7 +534,7 @@ export function WelcomeScreen({ onNext, onBack, onClose }: ScreenProps) {
       {/* Use EXACT Tailwind classes from Figma design context */}
       {/* Use EXACT SVG code from Figma */}
 
-      {/* Verified asset - use actual file */}
+      {/* Verified asset - use LOCAL file path, NOT Figma URL */}
       <img src="/plaid-assets/plaid-logo.svg" alt="Plaid" className="w-[120px] h-[40px]" />
 
       {/* Failed asset - visible placeholder so user sees what's missing */}
@@ -629,12 +694,18 @@ Visit: http://localhost:5173/plaid
 - Proceed to next phase without gate check passing
 - Approximate SVGs or substitute similar icons
 - Silently fail (always record failures in manifest with reasons)
+- Use Figma MCP asset URLs directly in generated code (must be local)
+- Batch manifest updates at the end
+- Generate screens without downloading assets first
 
 ### ALWAYS:
-- Create manifest FIRST before any other work
-- Update manifest after EVERY significant action
+- Create manifest first before any other work
+- Update manifest after each significant action
+- Parse asset URLs from `get_design_context` (look for `const img* = "https://www.figma.com/api/mcp/asset/..."`)
+- Download assets to local paths in Phase 3
+- Replace Figma URLs with local paths in Phase 5
 - Make failures visible (red placeholder boxes, not invisible broken images)
-- Report everything in final summary (user fixes issues after, not during)
+- Report everything in final summary
 
 ---
 
@@ -744,4 +815,20 @@ mcp__figma__get_design_context(fileKey, nodeId) → Code + assets
 ```css
 /* Navigation */ cubic-bezier(0.36, 0.66, 0.04, 1) 500ms
 /* Modal */      cubic-bezier(0.32, 0.72, 0, 1) 500ms
+```
+
+### Asset Handling Flow
+
+```
+Phase 2: EXTRACT
+  get_design_context returns: const img = "https://www.figma.com/api/mcp/asset/..."
+  → Parse URLs, add to manifest.assets[]
+                              ↓
+Phase 3: DOWNLOAD
+  curl -L "{figma_url}" -o "{local_path}"
+  → Update manifest.assets[].status = "verified"
+                              ↓
+Phase 5: GENERATE
+  Use local paths: <img src="/assets/close-icon.svg">
+  NOT Figma URLs: <img src="https://www.figma.com/api/mcp/asset/...">
 ```
