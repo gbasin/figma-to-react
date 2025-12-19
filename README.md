@@ -4,16 +4,13 @@ A Claude Code plugin that converts Figma screen flows into pixel-perfect TypeScr
 
 ## Features
 
-- **Pixel-perfect conversion** — Exact assets, colors, spacing, and typography from Figma
-- **Asset verification** — Each downloaded/extracted asset is screenshot-compared against Figma before use
-- **iOS-native animations** — Authentic navigation transitions using iOS spring curves
-- **Interactive elements** — Inputs, toggles, and buttons work out of the box
-- **Screen visual verification** — Full screenshot comparison with auto-fix for discrepancies
-- **Parallel processing** — Assets, screens, and verification run concurrently
+- **Pixel-perfect conversion** — Uses Figma MCP output verbatim, preserving exact layout and styling
+- **Smart asset handling** — Downloads assets, deduplicates by content hash, renames generics to meaningful names
+- **Auto-detection** — Automatically detects screens, flow name, output directories, and frame dimensions
+- **Interactive components** — Wires up inputs, dropdowns, toggles, and navigation
+- **iOS-like animations** — Adds appropriate animations for mobile flows
 
 ## Prerequisites
-
-Before using this plugin, ensure you have:
 
 1. **Figma MCP Server** configured and authenticated
    ```
@@ -21,11 +18,7 @@ Before using this plugin, ensure you have:
    mcp__figma__whoami
    ```
 
-2. **Browser automation** for visual verification (configurable)
-   - Default: `chrome` (Claude in Chrome integration — start with `--chrome` flag)
-   - Alternatives: `dev-browser` skill, `playwright` skill, `puppeteer`, or skip verification
-
-3. **React + Tailwind CSS** project (Figma MCP outputs Tailwind classes)
+2. **React + Tailwind CSS** project (Figma MCP outputs Tailwind classes)
 
 ## Installation
 
@@ -39,148 +32,98 @@ Before using this plugin, ensure you have:
 
 ## Usage
 
-### Slash Command
-
-```
-/figma-to-react https://www.figma.com/design/abc123/My-Flow?node-id=1-234
-```
-
 ### Natural Language
 
 ```
 Convert this Figma flow to React: https://www.figma.com/design/abc123/My-Flow?node-id=1-234
 ```
 
-## Configuration
+## How It Works
 
-The plugin will ask for configuration upfront (with auto-detected suggestions):
+### 1. Auto-Detect Configuration
 
-| Setting | Description | Auto-detect |
-|---------|-------------|-------------|
-| Flow name | kebab-case identifier (e.g., `plaid-link`) | From Figma file name |
-| Output directory | Where to create components | Project structure |
-| Asset directory | Where to save images/icons | `/public/` or `/assets/` |
-| DeviceFrame | Existing component or create new | Glob search |
-| Container mode | `phone-frame`, `modal`, `fullscreen`, `none` | Figma frame analysis |
-| Brand substitutions | Company name, bank name | Project files |
-| Browser tool | `chrome`, `dev-browser`, `playwright`, `puppeteer`, or `skip` | Default: `chrome` |
-| Dev server | Command to start dev server | Auto-detect from package.json |
-| Dev server URL | URL where dev server runs | Auto-detect (checks if already running) |
+The plugin analyzes your Figma file and project structure:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ DETECTED CONFIGURATION                                          │
+├─────────────────────────────────────────────────────────────────┤
+│ Flow name:      plaid-link (from Figma frame name)              │
+│ Output dir:     src/plaid/ (matches src/{feature}/ pattern)     │
+│ Asset dir:      public/plaid-assets/                            │
+│ Dimensions:     390x844 (from Figma frames)                     │
+├─────────────────────────────────────────────────────────────────┤
+│ SCREENS DETECTED (5)                                            │
+├─────────────────────────────────────────────────────────────────┤
+│  1. "01 - Welcome" (1:234)      → WelcomeScreen.tsx             │
+│  2. "02 - Select Bank" (1:567)  → SelectBankScreen.tsx          │
+│  ...                                                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 2. Extract & Process Assets
+
+- Calls Figma MCP `get_design_context` for each screen
+- Downloads all assets (SVGs, PNGs, etc.)
+- Deduplicates by content hash (same icon across screens = 1 file)
+- Renames generic names (`img-1.svg` → `arrow-back.svg`)
+
+### 3. Generate Components
+
+Uses Figma MCP output **verbatim** — the nested divs, absolute positioning, and percentage insets ensure pixel-perfect rendering.
+
+Components are wired up with:
+- **Navigation**: back, next, close handlers
+- **Interactive elements**: inputs, dropdowns, toggles, selectable lists
+- **Animations**: button press states, spinners, screen transitions
+
+### 4. Create Demo Page
+
+Generates a navigable demo with:
+- Screen state management
+- Navigation between screens
+- Container sized to Figma frame dimensions
 
 ## Output
 
 ```
 src/{flow}/
-├── assets.ts              # Asset registry (type-safe imports)
 ├── screens/
 │   ├── registry.ts
 │   └── components/
 │       ├── WelcomeScreen.tsx
 │       ├── SelectBankScreen.tsx
 │       └── ...
-├── {Flow}DemoPage.tsx
-└── components/
-    └── DeviceFrame.tsx (if created)
+└── {Flow}DemoPage.tsx
 
 public/{flow}-assets/
-├── manifest.json          # Asset manifest (tracks all assets)
 ├── logo.svg
+├── arrow-back.svg
 ├── icon-close.svg
 └── ...
 ```
 
-## Container Modes
+## Animations
 
-| Mode | Description |
-|------|-------------|
-| `phone-frame` | iPhone device chrome with status bar, dynamic island |
-| `modal` | Centered modal over blurred backdrop |
-| `fullscreen` | Screens fill viewport, no chrome |
-| `none` | Raw components only |
+For mobile flows (< 500px width), iOS-like animations are applied:
 
-## iOS Animations
-
-The plugin uses authentic iOS animation curves:
-
-| Transition | Curve | Duration |
-|------------|-------|----------|
-| Navigation push/pop | `cubic-bezier(0.36, 0.66, 0.04, 1)` | 500ms |
-| Modal present/dismiss | `cubic-bezier(0.32, 0.72, 0, 1)` | 500ms |
-| Button press | `ease-out` | 100ms |
-
-## Visual Verification
-
-The plugin automatically:
-
-1. Starts your dev server
-2. Opens each screen in a browser (parallel)
-3. Screenshots at exact viewport size
-4. Compares against Figma screenshots
-5. Auto-fixes discrepancies (up to 10 attempts)
-6. Reports any remaining TODOs
-
-### Auto-fixable Issues
-
-- Border radius
-- Spacing/padding
-- Colors
-- Font size/weight
-- Opacity
-
-### Not Auto-fixable (flagged as TODO)
-
-- Missing assets
-- Font family (requires installation)
-- Complex layout issues
-- Animation timing
-
-## Asset Handling
-
-**Important:** The plugin uses EXACT assets from Figma:
-
-- SVGs are copied verbatim (never approximated)
-- Images are downloaded directly
-- Icons are not substituted with libraries
-
-If an asset cannot be extracted, it's flagged as a TODO — never substituted.
-
-## Direct Screen Access
-
-The generated demo page supports URL parameters for direct screen access:
-
-```
-http://localhost:5173/plaid?screen=select-bank
-```
-
-This enables parallel visual verification.
+| Element | Animation |
+|---------|-----------|
+| Buttons | `active:scale-95` press feedback |
+| Spinners | `animate-spin` |
+| Screen transitions | `cubic-bezier(0.2, 0.9, 0.4, 1)` ~350ms |
 
 ## Example Output
 
 ```
-Created 7 files:
-  - src/plaid/screens/registry.ts
-  - src/plaid/screens/components/WelcomeScreen.tsx
-  - src/plaid/screens/components/SelectBankScreen.tsx
-  - src/plaid/screens/components/CredentialsScreen.tsx
-  - src/plaid/screens/components/SuccessScreen.tsx
-  - src/plaid/PlaidDemoPage.tsx
-  - Added route to App.tsx
-
-Asset Extraction & Verification:
-  plaid-logo.svg         PASS (verified: 120x40)
-  flagstar-logo.png      PASS (verified: 80x32)
-  success-check.svg      PASS (verified: 64x64)
-  bank-illustration.png  PASS (verified: 200x150)
-  search-icon.svg        PASS (verified: 24x24)
-
-Screen Visual Verification:
-  WelcomeScreen       PASS
-  SelectBankScreen    PASS (auto-fixed)
-  CredentialsScreen   PASS
-  SuccessScreen       PASS
-
-TODOs (1):
-  - SuccessScreen.tsx:78 — Font "SF Pro" not available
+Created:
+  src/plaid/screens/registry.ts
+  src/plaid/screens/components/WelcomeScreen.tsx
+  src/plaid/screens/components/SelectBankScreen.tsx
+  src/plaid/screens/components/CredentialsScreen.tsx
+  src/plaid/screens/components/SuccessScreen.tsx
+  src/plaid/PlaidDemoPage.tsx
+  public/plaid-assets/*.svg, *.png
 
 Run: pnpm dev
 Visit: http://localhost:5173/plaid
