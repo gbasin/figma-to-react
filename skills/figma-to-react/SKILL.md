@@ -1,761 +1,669 @@
 ---
 name: figma-to-react
 description: Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS. Creates fully functional screens with iOS-native animations, interactive elements, and automated visual verification. Use when converting Figma mobile flows to React, building demo apps from designs, or replicating vendor UIs (like Plaid, Stripe, etc.). Requires figma MCP server and dev-browser skill.
-license: MIT
-compatibility: Requires Figma MCP server with authentication, React project with Tailwind CSS, and optionally dev-browser/playwright/puppeteer for visual verification.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch mcp__figma__get_metadata mcp__figma__get_screenshot mcp__figma__get_design_context AskUserQuestion
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, WebFetch, mcp__figma__get_metadata, mcp__figma__get_screenshot, mcp__figma__get_design_context, AskUserQuestion
 ---
 
 # Figma to React Flow Conversion
 
 Convert linear Figma screen flows into pixel-perfect, fully functional React components.
 
-## Prerequisites
+## Core Principle: Manifest-Driven Execution
 
-Before using this skill, ensure:
+This skill uses a **manifest file** as the single source of truth. The manifest:
+- Tracks every screen from Figma node → React component
+- Tracks every asset from Figma URL → local file
+- Enforces phase gates (cannot proceed until prior phase complete)
+- Provides audit trail of what succeeded/failed
 
-1. **Figma MCP Server** is configured and authenticated
-   - Test: `mcp__figma__whoami` should return your Figma user info
-   - Tools used: `get_metadata`, `get_screenshot`, `get_design_context`
-
-2. **Browser automation** for visual verification (configurable)
-   - Default: `chrome` (Claude in Chrome integration — start with `--chrome` flag)
-   - Alternatives: `dev-browser` skill, `playwright` skill, `puppeteer`, or skip verification
-
-3. **Project has React + Tailwind CSS**
-   - Dev server runnable via `pnpm dev`, `npm run dev`, or similar
+**CRITICAL: Write the manifest FIRST, then update it as you progress. Never skip updating the manifest.**
 
 ---
 
-## Phase 1: Frontloaded Configuration
+## Phase 1: Configuration & Manifest Creation
 
-Gather ALL configuration upfront before starting work. Use `AskUserQuestion` for each:
+### Step 1.1: Gather Configuration
 
-### Required Information
+Use `AskUserQuestion` to collect:
 
-| # | Question | Auto-detect Strategy |
-|---|----------|---------------------|
-| 1 | **Figma URL** | Required from user |
-| 2 | **Screen node IDs** (optional) | If not provided, auto-detect from parent frame via `get_metadata` |
-| 3 | **Flow name** (kebab-case) | Derive from Figma file/frame name |
-| 4 | **Output directory** | Glob for `src/`, match project structure |
-| 5 | **Asset directory** | Look for `/public/` or `/assets/` |
-| 6 | **DeviceFrame component** | Glob for `**/DeviceFrame.tsx`, `**/PhoneFrame.tsx`, `**/IPhoneFrame.tsx` |
-| 7 | **Container mode** | Infer from Figma (phone bezel = phone-frame, modal chrome = modal) |
-| 8 | **Brand substitutions** | Scan package.json, README, existing components for company/bank names |
-| 9 | **Browser tool** | Default: `chrome`. Options: `chrome`, `dev-browser`, `playwright`, `puppeteer`, or skip |
-| 10 | **Dev server command** | Auto-detect (see below) |
-| 11 | **Dev server URL** | Auto-detect (see below) |
+| Required | Question |
+|----------|----------|
+| ✅ | Figma URL (file or specific frame) |
+| Optional | Explicit screen node IDs (if auto-detect won't work) |
 
-### Dev Server Detection
+Auto-detect the rest:
+- **Flow name**: Derive from Figma file/frame name (kebab-case)
+- **Output directory**: Glob for `src/`, match project structure
+- **Asset directory**: Look for `public/` or `src/assets/`
+- **DeviceFrame**: Glob for `**/DeviceFrame.tsx`, `**/PhoneFrame.tsx`
+- **Container mode**: Infer from Figma (phone bezel → phone-frame, modal chrome → modal)
 
-Before asking the user, detect the dev server setup:
+### Step 1.2: Discover Screens
 
+**If explicit node IDs provided:**
+- Parse and use in order provided
+
+**If auto-detecting:**
 ```
-1. Check if server is ALREADY RUNNING:
-   - curl http://localhost:5173, :3000, :3001, :8080
-   - If responding, use that URL and skip starting server
-
-2. Detect package manager:
-   - pnpm-lock.yaml → pnpm
-   - yarn.lock → yarn
-   - package-lock.json → npm
-
-3. Detect dev script from package.json:
-   - scripts.dev → "{pm} dev"
-   - scripts.start → "{pm} start"
-   - scripts.serve → "{pm} serve"
-
-4. Detect port from config:
-   - vite.config.ts → server.port
-   - next.config.js → typically 3000
-   - package.json scripts → --port flag
+mcp__figma__get_metadata(fileKey, parentNodeId)
+  → Filter for screen-like frames (consistent dimensions)
+  → Order by x-position (left-to-right) or by name
 ```
 
-**Present to user:**
+### Step 1.3: Create Manifest
+
+**MANDATORY: Create `{flow-name}-manifest.json` before ANY other work.**
+
+```json
+{
+  "meta": {
+    "flowName": "plaid-link",
+    "figmaFileKey": "abc123",
+    "figmaUrl": "https://www.figma.com/design/abc123/Plaid-Flow",
+    "createdAt": "2024-12-19T10:00:00Z",
+    "currentPhase": "extraction"
+  },
+  "config": {
+    "outputDir": "src/plaid",
+    "assetDir": "public/plaid-assets",
+    "containerMode": "phone-frame",
+    "deviceFrame": "src/components/DeviceFrame.tsx"
+  },
+  "screens": [
+    {
+      "order": 1,
+      "figma": {
+        "nodeId": "1:234",
+        "url": "https://www.figma.com/design/abc123/Plaid?node-id=1-234",
+        "layerName": "01 - Welcome"
+      },
+      "react": {
+        "componentName": "WelcomeScreen",
+        "filePath": "src/plaid/screens/components/WelcomeScreen.tsx",
+        "registryId": "welcome"
+      },
+      "extraction": {
+        "status": "pending",
+        "screenshot": null,
+        "designContext": null
+      },
+      "generation": {
+        "status": "blocked"
+      },
+      "verification": {
+        "status": "blocked",
+        "attempts": 0,
+        "passed": false
+      },
+      "assetRefs": []
+    }
+  ],
+  "assets": [],
+  "files": {
+    "registry": { "path": "src/plaid/screens/registry.ts", "status": "pending" },
+    "demoPage": { "path": "src/plaid/PlaidDemoPage.tsx", "status": "pending" },
+    "route": { "path": "src/App.tsx", "routePath": "/plaid", "status": "pending" }
+  },
+  "phases": {
+    "config": { "status": "complete" },
+    "extraction": { "status": "in_progress" },
+    "assets": { "status": "blocked" },
+    "architecture": { "status": "blocked" },
+    "screens": { "status": "blocked" },
+    "verification": { "status": "blocked" }
+  }
+}
 ```
-Dev server detected:
-  Command:  pnpm dev
-  URL:      http://localhost:5173
-  Status:   Not running (will start automatically)
 
-  [Use detected] / [Customize] / [Already running at different URL]
-```
+### Step 1.4: Confirm with User
 
-### Screen Node IDs
-
-Users can optionally provide explicit screen node IDs if:
-- The Figma structure is messy or nested
-- Screens aren't direct children of the parent frame
-- They want a specific subset of screens
-- They need a specific order different from Figma layout
-
-**Formats accepted:**
-```
-# Node IDs (colon or dash separator)
-1:234 1:567 1:890
-1-234 1-567 1-890
-
-# Full URLs
-https://www.figma.com/design/abc/File?node-id=1-234
-https://www.figma.com/design/abc/File?node-id=1-567
-```
-
-If no explicit node IDs provided, use `get_metadata` on the parent frame to discover screens automatically.
-
-### Container Modes
-
-- `phone-frame` — iPhone device chrome with status bar, dynamic island
-- `modal` — Centered modal over blurred/dimmed backdrop
-- `fullscreen` — Screens fill the viewport, no chrome
-- `none` — Raw components only, user provides wrapper
-
-### Present Configuration for Confirmation
-
-Before proceeding, show the user:
+Display configuration summary and screen list. Get explicit confirmation before proceeding.
 
 ```
 Configuration:
-  Flow name:      plaid-link
-  Output:         src/plaid/
-  Assets:         public/plaid-assets/
-  DeviceFrame:    src/components/DeviceFrame.tsx (existing)
-  Container:      phone-frame
-  Company:        Usonia
-  Bank:           Flagstar Bank
-  Browser tool:   dev-browser
-  Dev server:     pnpm dev → http://localhost:5173 (detected, not running)
+  Flow: plaid-link
+  Screens: 5 discovered
+  Output: src/plaid/
+  Assets: public/plaid-assets/
+
+Screens to convert:
+  1. 01 - Welcome (1:234) → WelcomeScreen.tsx
+  2. 02 - Select Bank (1:567) → SelectBankScreen.tsx
+  3. 03 - Credentials (1:890) → CredentialsScreen.tsx
+  ...
 
 Proceed? [Y/n]
 ```
 
 ---
 
-## Phase 2: Extract Figma Designs
+## Phase 2: Figma Extraction
 
-### Step 2.1: Determine Screen Nodes
-
-**If explicit node IDs were provided:**
+### Gate Check
 ```
-Parse provided node IDs/URLs
-  -> Convert URL format (1-234) to API format (1:234)
-  -> Use in the order provided by user
-  -> Skip metadata discovery
+READ manifest
+VERIFY phases.config.status === "complete"
+IF NOT → STOP, complete Phase 1
 ```
 
-**If no explicit node IDs (auto-detect):**
+### Step 2.1: Extract Each Screen (Parallel)
+
+For each screen in `manifest.screens`:
+
 ```
-mcp__figma__get_metadata(fileKey, parentNodeId)
-  -> Returns all child nodes in the frame
-  -> Filter for screen-like frames (consistent dimensions, sequential naming)
-  -> Order by x-position (left-to-right) or by name
-  -> Present discovered screens to user for confirmation
+1. Get screenshot:
+   mcp__figma__get_screenshot(fileKey, nodeId)
+   → Save to temp location
+   → UPDATE manifest: screens[i].extraction.screenshot = path
+
+2. Get design context:
+   mcp__figma__get_design_context(fileKey, nodeId)
+   → Returns: Tailwind classes, asset URLs, SVG code
+   → UPDATE manifest: screens[i].extraction.designContext = "extracted"
+   → UPDATE manifest: screens[i].extraction.status = "complete"
+
+3. Identify assets from design context:
+   → For each asset found, add to manifest.assets[] if not exists
+   → Add asset ID to screens[i].assetRefs[]
 ```
 
-### Step 2.2: Get Screenshots (Parallel)
+### Step 2.2: Update Manifest
 
-For each screen node (in parallel):
+After ALL screens extracted:
 ```
-mcp__figma__get_screenshot(fileKey, screenNodeId)
-  -> Save to temp location for later comparison
+UPDATE manifest: phases.extraction.status = "complete"
+UPDATE manifest: phases.assets.status = "in_progress"
 ```
 
-### Step 2.3: Get Design Context (Parallel)
-
-For each screen node (in parallel):
-```
-mcp__figma__get_design_context(fileKey, screenNodeId)
-  -> Returns:
-     - Tailwind CSS classes
-     - Asset URLs (images, icons)
-     - SVG code (exact, not approximated)
-     - Font families, colors, spacing
-```
+**CHECKPOINT: Read manifest. Every screen must have `extraction.status === "complete"`**
 
 ---
 
-## Phase 3: Asset Handling
+## Phase 3: Asset Download & Verification
 
-### CRITICAL: Prefer SVG Over Raster
-
-> **Always export as SVG when the asset is vector-based.**
->
-> | Asset Type | Format | Reason |
-> |------------|--------|--------|
-> | Icons | SVG | Scalable, tiny file size, crisp at any resolution |
-> | Logos | SVG | Scalable, often have transparency |
-> | Illustrations (vector) | SVG | Preserves paths, gradients, scalability |
-> | Photos / raster art | PNG/JPG | Already rasterized, SVG won't help |
->
-> **How to tell:** In Figma, vector assets show paths/shapes in the layers panel. Raster assets show as embedded images.
->
-> When `get_design_context` returns both SVG code AND an image URL for the same asset, **always use the SVG**.
-
-### CRITICAL: Exact Assets Only
-
-> **NEVER approximate assets. NEVER substitute similar icons/images.**
->
-> - **SVGs**: Copy EXACT SVG code from Figma. Embed inline or save as .svg
-> - **Images**: Download EXACT asset from Figma URL (only for raster assets)
-> - **Icons**: Use PRECISE icon from Figma, not "close enough" from a library
-> - **Illustrations**: Must be the exact file — prefer SVG if vector-based
->
-> If an asset cannot be extracted, flag as TODO — do not substitute.
-
-### Asset Naming
-
-AI derives names from Figma layer names and visual context:
-
-| Figma Layer Name | Derived Asset Name |
-|------------------|-------------------|
-| "Bank Logo" | `bank-logo.png` |
-| "Success Illustration" | `success-illustration.svg` |
-| "icon/search" | `search-icon.svg` |
-| "Plaid Logo" | `plaid-logo.svg` |
-
-### Download Process with Verification
-
-For each asset, download/extract AND verify before proceeding:
-
+### Gate Check
 ```
-For each asset (can parallelize):
-  1. EXTRACT
-     - Images: curl -L "{figma-asset-url}" -o public/{flow}-assets/{name}.png
-     - SVGs: Copy exact SVG code to public/{flow}-assets/{name}.svg
-
-  2. VERIFY (immediate, before moving to next asset)
-     a. Get Figma reference:
-        - Use get_screenshot on the specific node containing this asset
-        - Or crop the asset region from the full screen screenshot
-
-     b. Render local asset:
-        - Open browser to a minimal HTML page that displays just this asset
-        - Screenshot the rendered asset at same dimensions
-
-     c. Compare:
-        - Visual diff between Figma asset and local render
-        - Check: dimensions match, colors match, no corruption, no missing parts
-
-     d. Result:
-        - PASS: Asset verified, continue
-        - FAIL: Re-download/re-extract (up to 3 attempts)
-        - GIVE UP: Flag as TODO, note what went wrong
+READ manifest
+VERIFY phases.extraction.status === "complete"
+VERIFY ALL screens[].extraction.status === "complete"
+IF NOT → STOP, complete Phase 2
 ```
 
-### Verification Criteria
+### Step 3.1: Download Each Asset
 
-| Asset Type | Check |
-|------------|-------|
-| **PNG/JPG** | File not corrupt, dimensions match Figma, colors accurate |
-| **SVG** | Renders correctly, paths complete, colors match, no missing elements |
-| **Icons** | Crisp at intended size, stroke widths correct |
-| **Illustrations** | All elements present, gradients render, no clipping |
-
-### Figma MCP Variant Limitation
-
-**Known Issue:** The Figma MCP has a limitation with component variants:
-
-| Tool | Behavior |
-|------|----------|
-| `get_screenshot` | ✅ Renders correct variant (e.g., shows "Chase" bank chip) |
-| `get_design_context` | ❌ Returns base component assets (e.g., always "Wells Fargo") |
-
-When the design uses component variants (e.g., bank chips, icon variants, themed buttons), `get_design_context` may return the wrong asset.
-
-**Detection:** Asset verification will catch this — the downloaded asset won't match the Figma screenshot.
-
-### Asset Extraction Priority
-
-When an asset fails to extract correctly, try in this order:
-
-1. **Direct extraction** via `get_design_context` SVG/image URL
-2. **Figma REST API** — ask user for token, then: `curl -H "X-Figma-Token: {token}" "https://api.figma.com/v1/images/{fileKey}?ids={nodeId}&format=png&scale=2"`
-3. **Manual export** — ask user to export from Figma desktop
-4. **Flag as TODO** — default if above fail
-5. **Screenshot extraction** — LAST RESORT, only if user explicitly approves AND asset is NOT an SVG
-
-> **Screenshot extraction rules:**
-> - NEVER use for SVGs (vectors become raster)
-> - NEVER auto-extract without asking user first
-> - Always mark in output: `⚠️ DEGRADED (screenshot extract)`
-
-### Asset Verification Output
+For each asset in `manifest.assets`, try extraction methods in order until one succeeds:
 
 ```
-Assets (5 total):
-  plaid-logo.svg       PASS (verified 24x24)
-  flagstar-logo.png    PASS (verified 120x40)
-  success-check.svg    PASS (verified 64x64)
-  bank-illustration.png PASS (verified 200x150)
-  search-icon.svg      FAIL → TODO: SVG gradient not rendering, needs manual fix
+1. ATTEMPT: Direct extraction from design context
+   - SVGs: Copy EXACT SVG code
+   - Images: curl -L "{figmaUrl}" -o {localPath}
+
+   IF success:
+     assets[i].status = "verified"
+     assets[i].extractionMethod = "direct"
+     CONTINUE to next asset
+
+2. ATTEMPT: Figma REST API (if available)
+   curl -H "X-Figma-Token: {token}" \
+     "https://api.figma.com/v1/images/{fileKey}?ids={nodeId}&format=png&scale=2"
+
+   IF success:
+     assets[i].status = "verified"
+     assets[i].extractionMethod = "api"
+     CONTINUE to next asset
+
+3. ATTEMPT: Screenshot extraction (images only, not SVGs)
+   - Crop asset region from full screen screenshot
+   - Save to local path
+
+   IF success AND asset is NOT svg:
+     assets[i].status = "degraded"
+     assets[i].extractionMethod = "screenshot"
+     CONTINUE to next asset
+
+4. ALL METHODS FAILED:
+   assets[i].status = "failed"
+   assets[i].failureReason = "All extraction methods failed: {details}"
+   CONTINUE to next asset (don't stop)
 ```
 
-### CRITICAL: Generate Asset Manifest & Registry
+**Note:** If any assets get to step 2 (Figma REST API), stop and ask user if they can share a token before proceeding.
 
-**After extracting all assets, generate these files to prevent assets being forgotten during component generation:**
+### Step 3.2: Complete Phase
 
-#### 1. Asset Manifest (`public/{flow}-assets/manifest.json`)
+After attempting ALL assets (regardless of success/failure):
 
-```json
-{
-  "generatedAt": "2024-01-15T10:30:00Z",
-  "basePath": "/plaid-assets",
-  "assets": {
-    "plaid-logo": {
-      "file": "plaid-logo.svg",
-      "path": "/plaid-assets/plaid-logo.svg",
-      "type": "svg",
-      "dimensions": { "width": 120, "height": 40 },
-      "screens": ["welcome"],
-      "status": "verified"
-    },
-    "flagstar-logo": {
-      "file": "flagstar-logo.png",
-      "path": "/plaid-assets/flagstar-logo.png",
-      "type": "png",
-      "dimensions": { "width": 80, "height": 32 },
-      "screens": ["select-bank", "credentials"],
-      "status": "verified"
-    },
-    "close-icon": {
-      "file": "close-icon.svg",
-      "path": "/plaid-assets/close-icon.svg",
-      "type": "svg",
-      "dimensions": { "width": 24, "height": 24 },
-      "screens": ["welcome", "select-bank", "credentials", "success"],
-      "status": "verified",
-      "inline": true
-    }
-  }
+```
+UPDATE manifest: phases.assets.status = "complete"
+UPDATE manifest: phases.architecture.status = "in_progress"
+```
+
+**Note:** Failed assets don't block progress. They get placeholder code in Phase 5 and are reported in the final summary.
+
+---
+
+## Phase 4: Generate Architecture
+
+### Gate Check
+```
+READ manifest
+VERIFY phases.assets.status === "complete"
+IF NOT → STOP, complete Phase 3
+```
+
+### Step 4.1: Create Registry
+
+Write `{outputDir}/screens/registry.ts`:
+
+```typescript
+import type { ComponentType } from 'react';
+
+export interface ScreenProps {
+  onNext?: () => void;
+  onBack?: () => void;
+  onClose?: () => void;
+}
+
+export interface Screen {
+  id: string;
+  title: string;
+  component: ComponentType<ScreenProps>;
+}
+
+// Imports generated from manifest.screens
+import { WelcomeScreen } from './components/WelcomeScreen';
+// ... for each screen
+
+export const screens: Screen[] = [
+  { id: 'welcome', title: 'Welcome', component: WelcomeScreen },
+  // ... from manifest
+];
+
+export const screenFlow: string[] = ['welcome', /* ... */];
+
+export function getScreenById(id: string): Screen | undefined {
+  return screens.find(s => s.id === id);
+}
+
+export function getNextScreenId(currentId: string): string | null {
+  const index = screenFlow.indexOf(currentId);
+  return index >= 0 && index < screenFlow.length - 1 ? screenFlow[index + 1] : null;
+}
+
+export function getPrevScreenId(currentId: string): string | null {
+  const index = screenFlow.indexOf(currentId);
+  return index > 0 ? screenFlow[index - 1] : null;
 }
 ```
 
-#### 2. Asset Registry (`src/{flow}/assets.ts`)
+UPDATE manifest: `files.registry.status = "complete"`
+
+### Step 4.2: Create Demo Page
+
+Write `{outputDir}/{FlowName}DemoPage.tsx`:
 
 ```typescript
-// Auto-generated asset registry - DO NOT EDIT MANUALLY
-// Generated from: public/plaid-assets/manifest.json
+import { useState } from 'react';
+import { screens, screenFlow, getScreenById, getNextScreenId, getPrevScreenId } from './screens/registry';
+import { DeviceFrame } from '@/components/DeviceFrame';
 
-export const assets = {
-  plaidLogo: '/plaid-assets/plaid-logo.svg',
-  flagstarLogo: '/plaid-assets/flagstar-logo.png',
-  closeIcon: '/plaid-assets/close-icon.svg',
-  successCheck: '/plaid-assets/success-check.svg',
-  bankIllustration: '/plaid-assets/bank-illustration.png',
-} as const;
+export function PlaidDemoPage() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const directScreen = searchParams.get('screen');
 
-export type AssetKey = keyof typeof assets;
+  const [currentScreenId, setCurrentScreenId] = useState(
+    directScreen && screenFlow.includes(directScreen) ? directScreen : screenFlow[0]
+  );
 
-// Inline SVGs (for icons that need color manipulation)
-export const inlineSvgs = {
-  closeIcon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>`,
-} as const;
-```
+  const currentScreen = getScreenById(currentScreenId);
+  if (!currentScreen) return null;
 
-**Why this matters:** Without these files, the agent may "forget" downloaded assets when generating components later. The registry creates a concrete import that components MUST use.
+  const CurrentComponent = currentScreen.component;
 
-Only proceed to Phase 4 after:
-1. All critical assets pass verification (or are flagged as TODOs)
-2. `manifest.json` is written
-3. `assets.ts` registry is generated
+  const handleNext = () => {
+    const next = getNextScreenId(currentScreenId);
+    if (next) setCurrentScreenId(next);
+  };
 
----
+  const handleBack = () => {
+    const prev = getPrevScreenId(currentScreenId);
+    if (prev) setCurrentScreenId(prev);
+  };
 
-## Phase 4: Generate Core Architecture
+  const handleClose = () => setCurrentScreenId(screenFlow[0]);
 
-Generate these files FIRST (sequential, establishes structure):
-
-### 4.1: Registry (`screens/registry.ts`)
-
-- Export `ScreenProps` interface with `onNext`, `onBack`, `onClose` callbacks
-- Export `Screen` interface with `id`, `title`, `component`
-- Export `screens` array and `screenFlow` order
-- Export helper functions: `getScreenById`, `getNextScreenId`, `getPrevScreenId`
-
-### 4.2: Demo Page (`{Flow}DemoPage.tsx`)
-
-**Must support direct screen access via URL params** for parallel verification:
-```
-/{flow}?screen={screenId}
-```
-
-- Read `?screen=` param to allow direct navigation
-- Render current screen component with `onNext`/`onBack`/`onClose` handlers
-- Wrap in DeviceFrame (if container mode requires it)
-- Optional: sidebar showing all screens for easy navigation
-
-### 4.3: DeviceFrame Component (if needed)
-
-For `phone-frame` container mode, create iPhone 14 Pro frame:
-- 390x844 viewport
-- Black bezel with rounded corners
-- Status bar (9:41, signal, wifi, battery)
-- Dynamic Island
-
----
-
-## Phase 5: Generate Screen Components (Parallel)
-
-Once core architecture is in place, generate each screen component IN PARALLEL.
-
-### CRITICAL: Read Asset Manifest First
-
-**Before generating ANY component, read the asset manifest:**
-
-```
-1. Read `public/{flow}-assets/manifest.json`
-2. For each screen, identify which assets it uses (from the `screens` field)
-3. Import from the asset registry, NOT hardcoded paths
-```
-
-### Component Template
-
-For each screen, create `screens/components/{ScreenName}.tsx`:
-
-```typescript
-import type { ScreenProps } from '../registry';
-import { assets, inlineSvgs } from '../../assets';  // ALWAYS import from registry
-
-export function WelcomeScreen({ onNext, onBack, onClose }: ScreenProps) {
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header with close button */}
-      <div className="flex items-center justify-between p-4">
-        <button
-          onClick={onClose}
-          className="p-2 active:scale-[0.97] transition-transform duration-100"
-          dangerouslySetInnerHTML={{ __html: inlineSvgs.closeIcon }}
-        />
-      </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+      <DeviceFrame>
+        <CurrentComponent onNext={handleNext} onBack={handleBack} onClose={handleClose} />
+      </DeviceFrame>
 
-      {/* Content - use exact Tailwind classes from Figma */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <img
-          src={assets.plaidLogo}  {/* USE REGISTRY, not hardcoded path */}
-          alt="Plaid"
-          className="w-[120px] h-[40px] mb-8"
-        />
-        <h1 className="text-[24px] font-semibold text-[#111211] text-center mb-4">
-          Connect your bank account
-        </h1>
-        <p className="text-[16px] text-[#6a6a6a] text-center">
-          Usonia uses Plaid to securely connect to your bank.
-        </p>
-      </div>
-
-      {/* Footer with CTA */}
-      <div className="p-6">
-        <button
-          onClick={onNext}
-          className="w-full py-4 bg-[#111211] text-white rounded-xl text-[17px] font-semibold active:scale-[0.97] transition-transform duration-100"
-        >
-          Continue
-        </button>
+      {/* Screen selector sidebar */}
+      <div className="ml-8 space-y-2">
+        {screens.map((screen, i) => (
+          <button
+            key={screen.id}
+            onClick={() => setCurrentScreenId(screen.id)}
+            className={`block text-left px-3 py-1 rounded ${
+              screen.id === currentScreenId ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {i + 1}. {screen.title}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 ```
 
-### Asset Usage Rules
+UPDATE manifest: `files.demoPage.status = "complete"`
 
-| Asset Type | How to Use |
-|------------|------------|
-| Images (png/jpg) | `<img src={assets.assetName} />` |
-| SVG files | `<img src={assets.assetName} />` |
-| Inline SVGs (for color manipulation) | `dangerouslySetInnerHTML={{ __html: inlineSvgs.iconName }}` |
+### Step 4.3: Add Route
 
-**NEVER hardcode asset paths.** Always import from `assets.ts`. This ensures:
-1. Type safety (TypeScript will error if asset doesn't exist)
-2. Single source of truth (paths defined once)
-3. Assets can't be "forgotten" (import forces you to use what was extracted)
+Add route to App.tsx or router config.
 
-### Interactive Elements
+UPDATE manifest: `files.route.status = "complete"`
 
-Make ALL interactive elements functional with local state:
+### Step 4.4: Complete Phase
+
+```
+UPDATE manifest: phases.architecture.status = "complete"
+UPDATE manifest: phases.screens.status = "in_progress"
+UPDATE manifest: ALL screens[].generation.status = "pending" (unblock them)
+```
+
+---
+
+## Phase 5: Generate Screen Components
+
+### Gate Check
+```
+READ manifest
+VERIFY phases.architecture.status === "complete"
+VERIFY files.registry.status === "complete"
+IF NOT → STOP, complete Phase 4
+```
+
+### Step 5.1: Generate Each Screen (Parallel)
+
+For each screen in `manifest.screens`:
+
+**Before generating, gather required assets:**
+```
+READ manifest
+FOR assetId IN screen.assetRefs:
+  asset = manifest.assets.find(a => a.id === assetId)
+
+  IF asset.status === "verified" OR asset.status === "degraded":
+    → Use asset.local.filePath in code
+
+  IF asset.status === "failed":
+    → Use visible placeholder (gray box with "MISSING: {name}")
+    → Add to screen's failedAssets list for summary
+```
+
+**Generate component with real assets or visible placeholders:**
 
 ```typescript
-// Text inputs
-const [email, setEmail] = useState('');
-<input
-  type="email"
-  value={email}
-  onChange={(e) => setEmail(e.target.value)}
-  className="..."
-  placeholder="Email address"
-/>
+import type { ScreenProps } from '../registry';
 
-// Checkboxes
-const [agreed, setAgreed] = useState(false);
-<button
-  onClick={() => setAgreed(!agreed)}
-  className={`w-6 h-6 rounded border-2 ${agreed ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}
->
-  {agreed && <CheckIcon />}
-</button>
+export function WelcomeScreen({ onNext, onBack, onClose }: ScreenProps) {
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Use EXACT Tailwind classes from Figma design context */}
+      {/* Use EXACT SVG code from Figma */}
 
-// Toggles
-const [enabled, setEnabled] = useState(false);
-<button
-  onClick={() => setEnabled(!enabled)}
-  className={`w-12 h-7 rounded-full transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
->
-  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${enabled ? 'translate-x-5' : 'translate-x-1'}`} />
-</button>
+      {/* Verified asset - use actual file */}
+      <img src="/plaid-assets/plaid-logo.svg" alt="Plaid" className="w-[120px] h-[40px]" />
+
+      {/* Failed asset - visible placeholder so user sees what's missing */}
+      <div className="w-[48px] h-[48px] bg-red-100 border-2 border-red-300 border-dashed flex items-center justify-center">
+        <span className="text-[10px] text-red-500 text-center">MISSING:<br/>bank-chip</span>
+      </div>
+    </div>
+  );
+}
 ```
 
-**No validation** — inputs are purely visual/interactive.
+**Placeholders are intentionally ugly** — red dashed borders make missing assets obvious when viewing the app, rather than silently broken.
+
+**Update manifest after each screen:**
+```
+UPDATE manifest: screens[i].generation.status = "complete"
+```
+
+### Step 5.2: Complete Phase
+
+```
+READ manifest
+VERIFY ALL screens[].generation.status === "complete"
+
+UPDATE manifest: phases.screens.status = "complete"
+UPDATE manifest: phases.verification.status = "in_progress"
+UPDATE manifest: ALL screens[].verification.status = "pending"
+```
 
 ---
 
-## Phase 6: iOS-Native Animations
+## Phase 6: Visual Verification
 
-### Animation Curves
+### Gate Check
+```
+READ manifest
+VERIFY phases.screens.status === "complete"
+IF NOT → STOP, complete Phase 5
+```
 
-| Transition | Curve | Duration |
-|------------|-------|----------|
-| Navigation (push/pop) | `cubic-bezier(0.36, 0.66, 0.04, 1)` | 500ms |
-| Modal (present/dismiss) | `cubic-bezier(0.32, 0.72, 0, 1)` | 500ms |
-| Button press | `ease-out` | 100ms |
+### Step 6.1: Start Dev Server
 
-### Implementation
+Ensure dev server is running.
 
-- **Forward nav:** Screen slides in from right (`translateX(100%) → 0`)
-- **Back nav:** Screen slides out to right, previous screen from `translateX(-33%) → 0`
-- **Button press:** `active:scale-[0.97] transition-transform duration-100`
+### Step 6.2: Verify Each Screen
 
-Optionally add to Tailwind config: `'ios-spring': 'cubic-bezier(0.36, 0.66, 0.04, 1)'`
+For each screen in `manifest.screens`:
+
+```
+1. Navigate to /{flow}?screen={registryId}
+2. Wait for render + asset loading
+3. Screenshot at device dimensions
+4. Compare against Figma screenshot (from extraction phase)
+
+5. IF discrepancies found:
+   a. Identify issue (spacing, color, border-radius, etc.)
+   b. Auto-fix if possible (Tailwind class adjustment)
+   c. Re-screenshot and compare
+   d. Repeat up to 10 times
+   e. UPDATE manifest: screens[i].verification.attempts++
+
+6. UPDATE manifest:
+   - Pass: screens[i].verification.status = "passed", .passed = true
+   - Fail after 10 attempts: screens[i].verification.status = "failed"
+     Add issues to screens[i].verification.issues[]
+```
+
+### Step 6.3: Complete Phase
+
+```
+UPDATE manifest: phases.verification.status = "complete"
+UPDATE manifest: meta.currentPhase = "complete"
+```
 
 ---
 
-## Phase 7: Add Route
+## Phase 7: Output Summary
 
-Add route to app router: `<Route path="/{flow}" element={<{Flow}DemoPage />} />`
-
----
-
-## Phase 8: Visual Verification (Parallel)
-
-Use the configured browser tool to verify each screen matches Figma pixel-perfect.
-
-**If user chose "skip verification":** Skip this phase entirely, note in output summary.
-
-### Browser Tool Options
-
-| Tool | How to use |
-|------|------------|
-| `chrome` (default) | Use Claude in Chrome integration (`--chrome` flag or `/chrome` command) |
-| `dev-browser` | Use the dev-browser skill for navigation and screenshots |
-| `playwright` | Use the playwright skill for browser automation |
-| `puppeteer` | Run puppeteer scripts via Bash |
-| `skip` | Skip visual verification phase |
-
-**Claude in Chrome** is the recommended option — it's built into Claude Code and provides:
-- Direct browser control (navigate, click, type, scroll)
-- Console log and network request reading
-- Screenshot capture and GIF recording
-- Tab management
-- Works with your authenticated browser sessions
-
-**Enabling Chrome:**
-- If user started with `--chrome` flag: already enabled
-- Otherwise: run `/chrome` command to enable within the session
-- If Chrome extension not installed: prompt user to install from Chrome Web Store
-
-**Before visual verification, check Chrome status:**
-```
-1. Run `/chrome` to check connection status
-2. If not connected:
-   - If extension missing → ask user to install
-   - If can be enabled → the /chrome command will connect
-3. Once connected, proceed with verification
-```
-
-**Using Claude in Chrome for verification:**
-
-The `claude-in-chrome` MCP provides these tools (run `/mcp` → `claude-in-chrome` to see full list):
-
-| Tool | Usage |
-|------|-------|
-| `mcp__claude-in-chrome__navigate` | Navigate to URL |
-| `mcp__claude-in-chrome__screenshot` | Capture current page |
-| `mcp__claude-in-chrome__click` | Click on element |
-| `mcp__claude-in-chrome__fill` | Fill input field |
-| `mcp__claude-in-chrome__scroll` | Scroll the page |
-| `mcp__claude-in-chrome__resize` | Set viewport size |
-| `mcp__claude-in-chrome__console` | Read console logs |
-
-**Example verification workflow:**
-```
-1. mcp__claude-in-chrome__resize({ width: 390, height: 844 })
-2. mcp__claude-in-chrome__navigate({ url: "http://localhost:5173/plaid?screen=welcome" })
-3. Wait for load (check for network idle or specific element)
-4. mcp__claude-in-chrome__screenshot({ path: "tmp/welcome.png" })
-5. Compare against Figma screenshot
-```
-
-### IMPORTANT: Avoid Repeated Permission Prompts (for non-Chrome tools)
-
-**Problem:** Each unique inline `<<'EOF'` script is a different command, requiring permission every time — even if `Bash(bun x tsx:*)` is allowed. This breaks autonomous flow.
-
-**Why:** Claude Code permissions are "per project directory and command". Different heredoc content = different command = new permission prompt.
-
-**Solution:** Write a reusable script file ONCE, then call it with arguments. Same command pattern = auto-approved after first run.
-
-**Step 1:** At the start of Phase 8, create this script:
-
-```typescript
-// scripts/verify-screen.ts
-import { connect, waitForPageLoad } from "@/client.js";
-
-const [screenId, outputPath, baseUrl] = process.argv.slice(2);
-
-const client = await connect();
-const page = await client.page("main");
-
-await page.goto(`${baseUrl}?screen=${screenId}`);
-await waitForPageLoad(page);
-await new Promise(r => setTimeout(r, 500));
-await page.screenshot({ path: outputPath });
-
-await client.disconnect();
-```
-
-**Step 2:** Call with arguments (same command pattern each time):
-
-```bash
-# First call - requires permission
-bun x tsx scripts/verify-screen.ts welcome tmp/welcome.png http://localhost:5173/plaid
-
-# Subsequent calls - auto-approved (same script, different args)
-bun x tsx scripts/verify-screen.ts select-bank tmp/select-bank.png http://localhost:5173/plaid
-bun x tsx scripts/verify-screen.ts credentials tmp/credentials.png http://localhost:5173/plaid
-```
-
-**Why this works:** The command `bun x tsx scripts/verify-screen.ts` is the same each time. Claude Code recognizes it as the same executable with different arguments, so it reuses the permission from the first call.
-
-**Iterating on the script:** If you need to change the verification logic (different selectors, wait times, click actions, etc.):
-1. **Edit** `scripts/verify-screen.ts` using the Edit tool
-2. **Re-run** the same command → still auto-approved (same command pattern)
-3. Repeat as needed — no new permission prompts
-
-**DO NOT:** Generate inline `<<'EOF'` scripts in a loop — each one prompts for permission.
-
-### Process
+Read manifest and generate summary:
 
 ```
-1. Start dev server (single instance)
-2. For each screen (IN PARALLEL via multiple browser tabs):
-   a. Open /{flow}?screen={screenId}
-   b. Wait for render + asset loading
-   c. Screenshot at 390x844 viewport
-   d. Compare against Figma screenshot
-   e. If discrepancy found → auto-fix → re-verify (max 10 attempts)
-   f. If still wrong after 10 attempts → flag as TODO
-```
+✅ Flow: plaid-link
+   Route: /plaid
+   Screens: 5
 
-### Comparison Criteria
+📁 Files Created:
+   src/plaid/screens/registry.ts
+   src/plaid/screens/components/WelcomeScreen.tsx
+   src/plaid/screens/components/SelectBankScreen.tsx
+   ...
+   src/plaid/PlaidDemoPage.tsx
 
-| Element | Requirement |
-|---------|-------------|
-| Illustrations/SVGs | EXACT match (these were copied exactly) |
-| Spacing/padding | Within 2px tolerance |
-| Border radius | Exact match |
-| Colors | Exact hex match |
-| Typography | Correct font, size, weight |
-| Asset loading | All images visible, no broken refs |
+🎨 Assets (8 total, 6 verified, 1 degraded, 1 failed):
+   ✅ plaid-logo.svg (verified, direct)
+   ✅ success-check.svg (verified, direct)
+   ✅ close-icon.svg (verified, direct)
+   ✅ back-arrow.svg (verified, direct)
+   ✅ flagstar-logo.png (verified, direct)
+   ✅ bank-illustration.png (verified, api)
+   ⚠️  search-icon.svg (degraded, screenshot) — lower quality
+   ❌ bank-chip-chase.png (failed) — variant mismatch, all methods failed
 
-### Auto-Fix Process
+🖼️  Screen Verification:
+   ✅ WelcomeScreen (passed)
+   ✅ SelectBankScreen (passed, auto-fixed: rounded-lg → rounded-xl)
+   ⚠️  CredentialsScreen (passed with placeholder - 1 missing asset)
+   ✅ SuccessScreen (passed)
 
-When a discrepancy is detected:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. **Identify the issue** (e.g., "border-radius: Figma=12px, Rendered=8px")
-2. **Locate in component** (search for relevant Tailwind class)
-3. **Fix** (e.g., `rounded-lg` → `rounded-xl`)
-4. **Re-verify** (screenshot again)
-5. **Repeat** up to 10 times
-6. **Give up** if still wrong → add TODO comment
+🔧 ACTION REQUIRED (1 failed asset):
 
-Auto-fixable issues:
-- Border radius (`rounded-*`)
-- Spacing/padding (`p-*`, `m-*`, `gap-*`)
-- Colors (update hex value)
-- Font size (`text-*`)
-- Font weight (`font-*`)
-- Opacity (`opacity-*`)
+   bank-chip-chase.png
+   ├─ Figma node: https://www.figma.com/design/abc123/Plaid?node-id=1-890
+   ├─ Reason: Component variant - get_design_context returned base variant
+   ├─ Used in: CredentialsScreen (currently showing red placeholder)
+   └─ Fix: Export manually from Figma → public/plaid-assets/bank-chip-chase.png
 
-NOT auto-fixable (flag as TODO):
-- Missing/wrong assets
-- Complex layout issues
-- Animation timing
-- Font family (requires installation)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
----
-
-## Phase 9: Output Summary
-
-```
-Created 7 files:
-  - src/plaid/screens/registry.ts
-  - src/plaid/screens/components/WelcomeScreen.tsx
-  - src/plaid/screens/components/SelectBankScreen.tsx
-  - src/plaid/screens/components/CredentialsScreen.tsx
-  - src/plaid/screens/components/SuccessScreen.tsx
-  - src/plaid/PlaidDemoPage.tsx
-  - Added route to App.tsx
-
-Asset Extraction & Verification:
-  plaid-logo.svg         PASS (verified: 120x40, colors match)
-  flagstar-logo.png      PASS (verified: 80x32, no corruption)
-  success-check.svg      PASS (verified: 64x64, paths complete)
-  bank-illustration.png  PASS (verified: 200x150, colors match)
-  search-icon.svg        PASS (verified: 24x24, strokes correct)
-  bank-chip.png          TODO (variant mismatch - manual export needed)
-  # If user approved screenshot extraction:
-  # bank-chip.png        ⚠️ DEGRADED (screenshot extract - may have artifacts)
-
-Screen Visual Verification:
-  WelcomeScreen       PASS
-  SelectBankScreen    PASS (auto-fixed: rounded-lg → rounded-xl)
-  CredentialsScreen   PASS
-  SuccessScreen       PASS
-
-TODOs (2):
-  - SuccessScreen.tsx:78 — Font "SF Pro" not available, using Inter
-  - SelectBankScreen.tsx:45 — Asset "bank-chip.png" needs manual export from Figma
+📋 Manifest: plaid-link-manifest.json
 
 Run: pnpm dev
 Visit: http://localhost:5173/plaid
-Direct screen access: /plaid?screen={screenId}
+```
+
+**The summary shows exactly what succeeded, what failed, and what the user needs to do.** Failed assets have direct links to the Figma node for easy manual export.
+
+---
+
+## Absolute Rules
+
+### NEVER:
+- Skip creating/updating the manifest
+- Proceed to next phase without gate check passing
+- Approximate SVGs or substitute similar icons
+- Silently fail (always record failures in manifest with reasons)
+
+### ALWAYS:
+- Create manifest FIRST before any other work
+- Update manifest after EVERY significant action
+- Make failures visible (red placeholder boxes, not invisible broken images)
+- Report everything in final summary (user fixes issues after, not during)
+
+---
+
+## Manifest Schema Reference
+
+```typescript
+interface Manifest {
+  meta: {
+    flowName: string;
+    figmaFileKey: string;
+    figmaUrl: string;
+    createdAt: string;
+    currentPhase: 'config' | 'extraction' | 'assets' | 'architecture' | 'screens' | 'verification' | 'complete';
+  };
+  config: {
+    outputDir: string;
+    assetDir: string;
+    containerMode: 'phone-frame' | 'modal' | 'fullscreen' | 'none';
+    deviceFrame: string | null;
+  };
+  screens: Array<{
+    order: number;
+    figma: {
+      nodeId: string;
+      url: string;
+      layerName: string;
+    };
+    react: {
+      componentName: string;
+      filePath: string;
+      registryId: string;
+    };
+    extraction: {
+      status: 'pending' | 'complete';
+      screenshot: string | null;
+      designContext: 'pending' | 'extracted';
+    };
+    generation: {
+      status: 'blocked' | 'pending' | 'complete';
+    };
+    verification: {
+      status: 'blocked' | 'pending' | 'passed' | 'failed';
+      attempts: number;
+      passed: boolean;
+      issues: string[];
+    };
+    assetRefs: string[];
+  }>;
+  assets: Array<{
+    id: string;
+    figma: {
+      nodeId: string;
+      layerName: string;
+      url: string;
+    };
+    local: {
+      fileName: string;
+      filePath: string;
+      type: 'svg' | 'png' | 'jpg';
+    };
+    status: 'pending' | 'downloading' | 'verified' | 'degraded' | 'failed';
+    extractionMethod: 'direct' | 'api' | 'screenshot' | null;
+    failureReason: string | null;
+    usedBy: string[];
+  }>;
+  files: {
+    registry: { path: string; status: 'pending' | 'complete' };
+    demoPage: { path: string; status: 'pending' | 'complete' };
+    route: { path: string; routePath: string; status: 'pending' | 'complete' };
+  };
+  phases: {
+    config: { status: 'pending' | 'in_progress' | 'complete' };
+    extraction: { status: 'blocked' | 'in_progress' | 'complete' };
+    assets: { status: 'blocked' | 'in_progress' | 'complete' };
+    architecture: { status: 'blocked' | 'in_progress' | 'complete' };
+    screens: { status: 'blocked' | 'in_progress' | 'complete' };
+    verification: { status: 'blocked' | 'in_progress' | 'complete' };
+  };
+}
 ```
 
 ---
 
-## Edge Case Handling
+## Quick Reference
 
-| Issue | Action |
-|-------|--------|
-| SVG extraction fails | Flag TODO with Figma node link — **NEVER screenshot extract SVGs** |
-| Font not available | Use closest system font, flag TODO |
-| Complex gradient | Solid color approximation, flag TODO |
-| Asset URL 404 | Flag TODO, note which asset |
-| Animation in Figma | Note intended animation, flag TODO |
-| **Component variant mismatch** | Ask user: API token → manual export → TODO. Screenshot extraction only if explicitly approved for raster images |
-| **Any asset extraction failure** | Default to TODO, not screenshot extraction |
+### Phase Gates Summary
 
-### Absolute Rules
+| Phase | Gate Check |
+|-------|-----------|
+| 2. Extraction | `phases.config === "complete"` |
+| 3. Assets | `phases.extraction === "complete"` AND all `screens[].extraction.status === "complete"` |
+| 4. Architecture | `phases.assets === "complete"` (assets always complete - failures don't block) |
+| 5. Screens | `phases.architecture === "complete"` AND `files.registry.status === "complete"` |
+| 6. Verification | `phases.screens === "complete"` AND all `screens[].generation.status === "complete"` |
 
-**NEVER**:
-- Approximate SVGs or substitute similar icons
-- Use placeholder images
-- Silently fall back to screenshot extraction
-- Screenshot-extract SVG assets (vectors cannot be rasterized without loss)
-- Auto-extract without asking user first
+### Figma MCP Tools
 
-**ALWAYS**:
-- Ask user before using screenshot extraction
-- Flag degraded assets clearly in output
-- Prefer TODO over low-quality extraction
-- Explain why asset failed and what user can do
+```
+mcp__figma__get_metadata(fileKey, nodeId)     → Screen structure
+mcp__figma__get_screenshot(fileKey, nodeId)   → Visual reference
+mcp__figma__get_design_context(fileKey, nodeId) → Code + assets
+```
+
+### iOS Animation Curves
+
+```css
+/* Navigation */ cubic-bezier(0.36, 0.66, 0.04, 1) 500ms
+/* Modal */      cubic-bezier(0.32, 0.72, 0, 1) 500ms
+```
