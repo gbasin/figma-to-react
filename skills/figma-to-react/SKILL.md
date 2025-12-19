@@ -1,15 +1,15 @@
 ---
 name: figma-to-react
-version: 1.3.1
-description: Convert Figma screen flows into React components. Extracts design context, downloads assets, and generates pixel-perfect components.
+version: 1.3.2
+description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
-compatibility: Requires Figma MCP server (mcp__figma__*). Node.js environment with React project.
+compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
 allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch mcp__figma__get_metadata mcp__figma__get_screenshot mcp__figma__get_design_context AskUserQuestion
 ---
 
 # Figma to React
 
-Convert Figma screen flows into React components with local assets.
+Convert Figma screen flows into TypeScript React components with local assets.
 
 ## Step 1: Get Figma URL & Auto-Detect Configuration
 
@@ -131,7 +131,9 @@ After renaming, update references in the `.out.txt` files.
 
 ## Step 5: Generate Components
 
-For each screen, read the `.out.txt` file and create a React component:
+For each screen, read the `.out.txt` file and create a React component.
+
+**IMPORTANT: Use Figma MCP output verbatim.** Do not simplify, rewrite, or "clean up" the JSX structure. The nested divs, absolute positioning, and percentage insets are intentional - they ensure pixel-perfect rendering. Rewriting loses fidelity.
 
 ```typescript
 // src/onfido/screens/MotionMobile2Screen.tsx
@@ -139,8 +141,9 @@ import type { ScreenProps } from '../registry';
 
 export function MotionMobile2Screen({ onNext, onBack, onClose }: ScreenProps) {
   return (
-    // Paste the transformed code from flow-screen-2.out.txt
-    // The code already has local asset paths
+    // PASTE the code from flow-screen-2.out.txt verbatim
+    // Only modify to: wire up onClick handlers, add state for interactivity
+    // Do NOT restructure or simplify the JSX
   );
 }
 ```
@@ -159,6 +162,74 @@ Identify interactive elements and connect them to navigation callbacks:
 | "Skip" links | `onClick={onNext}` (or custom handler) |
 
 Look for `data-name` hints like "Navigation Bar", "Back Button", "Close", "CTA Button" to identify these elements. Make buttons/icons clickable with `cursor-pointer` if not already.
+
+### Wire Up Interactive Elements
+
+Make all form elements functional with local state. Infer the flow's purpose and wire accordingly:
+
+**Text Inputs:**
+```typescript
+const [email, setEmail] = useState('');
+<input value={email} onChange={(e) => setEmail(e.target.value)} />
+```
+
+**Dropdowns/Selects:**
+- Convert static dropdown designs to working `<select>` or custom dropdown
+- Track selected value in state
+- If options are visible in Figma, extract them
+
+**Toggles/Switches:**
+```typescript
+const [enabled, setEnabled] = useState(false);
+<div onClick={() => setEnabled(!enabled)} className={enabled ? 'bg-blue-500' : 'bg-gray-300'}>
+```
+
+**Checkboxes/Radio Buttons:**
+- Make clickable with state tracking
+- Radio groups should be mutually exclusive
+
+**Lists with Selection:**
+- Bank lists, option lists → track selected item
+- Highlight selected state visually
+
+**Data Flow Between Screens:**
+- Infer what data carries forward (e.g., selected bank → credentials screen)
+- Pass data via props or lift state to Demo Page
+- Example: `onNext({ selectedBank: 'Chase' })`
+
+No input validation required - just make elements interactive and functional.
+
+### Add Animations
+
+Infer and add basic animations based on context:
+
+**Button States:**
+- Add `active:scale-95` or `active:opacity-80` for press feedback
+- Add `transition-transform duration-100` for smooth feel
+
+**Loading/Waiting States:**
+- Spinners: Add `animate-spin` to rotating elements
+- Pulsing: Add `animate-pulse` to skeleton loaders
+- Progress bars: Animate width with CSS transitions
+
+**Screen Transitions (handled in Demo Page):**
+- Detect mobile dimensions (< 500px width) → use iOS-like curves
+- Desktop/web: `ease-out` over 200-300ms
+
+**iOS-like Animation Curves (CSS approximations):**
+```typescript
+// iOS uses spring physics, these are CSS approximations that feel similar
+const transitions = {
+  // Navigation push/pop (~0.35s in iOS)
+  push: 'transform 350ms cubic-bezier(0.2, 0.9, 0.4, 1)',
+  // Modal present/dismiss
+  modal: 'transform 400ms cubic-bezier(0.32, 0.72, 0, 1)',
+  // Interactive/interruptible
+  interactive: 'transform 300ms ease-out',
+};
+```
+
+Note: True iOS springs use damping/stiffness and can "bounce" - CSS cubic-bezier can only approximate the feel. For exact replication, use `framer-motion` or CSS `linear()` with spring keyframes.
 
 ## Step 6: Create Registry
 

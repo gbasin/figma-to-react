@@ -1,6 +1,6 @@
 # figma-to-react
 
-A Claude Code plugin that converts linear Figma screen flows into pixel-perfect React components with Tailwind CSS and iOS-native animations.
+A Claude Code plugin that converts Figma screen flows into pixel-perfect TypeScript React components with Tailwind CSS.
 
 ## Features
 
@@ -25,7 +25,7 @@ Before using this plugin, ensure you have:
    - Default: `chrome` (Claude in Chrome integration — start with `--chrome` flag)
    - Alternatives: `dev-browser` skill, `playwright` skill, `puppeteer`, or skip verification
 
-3. **React + Tailwind CSS** project with a runnable dev server
+3. **React + Tailwind CSS** project (Figma MCP outputs Tailwind classes)
 
 ## Installation
 
