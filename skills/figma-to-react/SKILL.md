@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.3.3
+version: 1.3.4
 description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
@@ -97,6 +97,16 @@ For each screen node ID, call `mcp__figma__get_design_context(fileKey, nodeId)` 
 - The full React component code (`export default function...` with all JSX)
 
 Do NOT truncate or save only the asset declarations. The full component code is required.
+
+**Verify completeness** after saving all screens:
+```bash
+# Should output nothing if all files are complete
+for f in /tmp/flow-screen-*.txt; do
+  grep -q "export default function\|export function" "$f" || echo "INCOMPLETE: $f"
+done
+```
+
+If any files are incomplete (missing component code), re-fetch them from Figma MCP.
 
 **Parallelization:** These calls are independent — extract all screens in parallel for faster processing.
 
