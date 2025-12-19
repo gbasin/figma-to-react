@@ -19,8 +19,8 @@ Before using this skill, ensure:
    - Tools used: `get_metadata`, `get_screenshot`, `get_design_context`
 
 2. **Browser automation** for visual verification (configurable)
-   - Default: `dev-browser` skill
-   - Alternatives: `chrome-devtools-mcp`, `playwright`, `puppeteer`, or skip verification
+   - Default: `chrome` (Claude in Chrome integration — start with `--chrome` flag)
+   - Alternatives: `dev-browser` skill, `playwright` skill, `puppeteer`, or skip verification
 
 3. **Project has React + Tailwind CSS**
    - Dev server runnable via `pnpm dev`, `npm run dev`, or similar
@@ -43,7 +43,7 @@ Gather ALL configuration upfront before starting work. Use `AskUserQuestion` for
 | 6 | **DeviceFrame component** | Glob for `**/DeviceFrame.tsx`, `**/PhoneFrame.tsx`, `**/IPhoneFrame.tsx` |
 | 7 | **Container mode** | Infer from Figma (phone bezel = phone-frame, modal chrome = modal) |
 | 8 | **Brand substitutions** | Scan package.json, README, existing components for company/bank names |
-| 9 | **Browser tool** | Default: `dev-browser`. Options: `dev-browser`, `chrome-devtools-mcp`, `playwright`, `puppeteer`, or skip |
+| 9 | **Browser tool** | Default: `chrome`. Options: `chrome`, `dev-browser`, `playwright`, `puppeteer`, or skip |
 | 10 | **Dev server command** | Auto-detect (see below) |
 | 11 | **Dev server URL** | Auto-detect (see below) |
 
@@ -546,13 +546,57 @@ Use the configured browser tool to verify each screen matches Figma pixel-perfec
 
 | Tool | How to use |
 |------|------------|
-| `dev-browser` (default) | Use the dev-browser skill for navigation and screenshots |
-| `chrome-devtools-mcp` | Use `mcp__chrome-devtools__*` tools (requires Chrome with `--remote-debugging-port=9222`) |
-| `playwright` | Run `npx playwright` commands via Bash |
+| `chrome` (default) | Use Claude in Chrome integration (`--chrome` flag or `/chrome` command) |
+| `dev-browser` | Use the dev-browser skill for navigation and screenshots |
+| `playwright` | Use the playwright skill for browser automation |
 | `puppeteer` | Run puppeteer scripts via Bash |
 | `skip` | Skip visual verification phase |
 
-### IMPORTANT: Avoid Repeated Permission Prompts
+**Claude in Chrome** is the recommended option — it's built into Claude Code and provides:
+- Direct browser control (navigate, click, type, scroll)
+- Console log and network request reading
+- Screenshot capture and GIF recording
+- Tab management
+- Works with your authenticated browser sessions
+
+**Enabling Chrome:**
+- If user started with `--chrome` flag: already enabled
+- Otherwise: run `/chrome` command to enable within the session
+- If Chrome extension not installed: prompt user to install from Chrome Web Store
+
+**Before visual verification, check Chrome status:**
+```
+1. Run `/chrome` to check connection status
+2. If not connected:
+   - If extension missing → ask user to install
+   - If can be enabled → the /chrome command will connect
+3. Once connected, proceed with verification
+```
+
+**Using Claude in Chrome for verification:**
+
+The `claude-in-chrome` MCP provides these tools (run `/mcp` → `claude-in-chrome` to see full list):
+
+| Tool | Usage |
+|------|-------|
+| `mcp__claude-in-chrome__navigate` | Navigate to URL |
+| `mcp__claude-in-chrome__screenshot` | Capture current page |
+| `mcp__claude-in-chrome__click` | Click on element |
+| `mcp__claude-in-chrome__fill` | Fill input field |
+| `mcp__claude-in-chrome__scroll` | Scroll the page |
+| `mcp__claude-in-chrome__resize` | Set viewport size |
+| `mcp__claude-in-chrome__console` | Read console logs |
+
+**Example verification workflow:**
+```
+1. mcp__claude-in-chrome__resize({ width: 390, height: 844 })
+2. mcp__claude-in-chrome__navigate({ url: "http://localhost:5173/plaid?screen=welcome" })
+3. Wait for load (check for network idle or specific element)
+4. mcp__claude-in-chrome__screenshot({ path: "tmp/welcome.png" })
+5. Compare against Figma screenshot
+```
+
+### IMPORTANT: Avoid Repeated Permission Prompts (for non-Chrome tools)
 
 **Problem:** Each unique inline `<<'EOF'` script is a different command, requiring permission every time — even if `Bash(bun x tsx:*)` is allowed. This breaks autonomous flow.
 

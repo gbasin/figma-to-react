@@ -22,8 +22,8 @@ Before using this plugin, ensure you have:
    ```
 
 2. **Browser automation** for visual verification (configurable)
-   - Default: `dev-browser` skill
-   - Alternatives: `playwright`, `puppeteer`, or skip verification
+   - Default: `chrome` (Claude in Chrome integration — start with `--chrome` flag)
+   - Alternatives: `dev-browser` skill, `playwright` skill, `puppeteer`, or skip verification
 
 3. **React + Tailwind CSS** project with a runnable dev server
 
@@ -63,7 +63,7 @@ The plugin will ask for configuration upfront (with auto-detected suggestions):
 | DeviceFrame | Existing component or create new | Glob search |
 | Container mode | `phone-frame`, `modal`, `fullscreen`, `none` | Figma frame analysis |
 | Brand substitutions | Company name, bank name | Project files |
-| Browser tool | `dev-browser`, `playwright`, `puppeteer`, `skip` | Default: `dev-browser` |
+| Browser tool | `chrome`, `dev-browser`, `playwright`, `puppeteer`, or `skip` | Default: `chrome` |
 | Dev server | Command to start dev server | Auto-detect from package.json |
 | Dev server URL | URL where dev server runs | Auto-detect (checks if already running) |
 
