@@ -96,6 +96,8 @@ Options:
 
 **Only after user confirms configuration, create `{flow-name}-manifest.json`.**
 
+**Why a manifest?** The manifest is important because it organizes and tracks progress throughout the process so the agent does not have to rely on their context window.
+
 ```json
 {
   "meta": {
