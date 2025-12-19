@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.3.2
+version: 1.3.3
 description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
@@ -86,12 +86,17 @@ If user chooses "Adjust settings", ask about:
 
 ## Step 2: Extract All Screens
 
-For each screen node ID, call `mcp__figma__get_design_context(fileKey, nodeId)` and save the raw response:
+For each screen node ID, call `mcp__figma__get_design_context(fileKey, nodeId)` and save the **complete** response to a temp file:
 
 ```bash
-# Save each screen's design context to a temp file
 # /tmp/flow-screen-1.txt, /tmp/flow-screen-2.txt, etc.
 ```
+
+**IMPORTANT:** Save the ENTIRE response, including:
+- Asset const declarations (`const img = "..."`)
+- The full React component code (`export default function...` with all JSX)
+
+Do NOT truncate or save only the asset declarations. The full component code is required.
 
 **Parallelization:** These calls are independent — extract all screens in parallel for faster processing.
 
@@ -153,6 +158,8 @@ export function MotionMobile2Screen({ onNext, onBack, onClose }: ScreenProps) {
 Derive component name from `data-name` attribute: `"Motion / Mobile 2"` → `MotionMobile2Screen`
 
 **Parallelization:** Component generation is independent per screen — generate all components in parallel.
+
+**Resilience:** Write each component file to disk immediately after generating. This ensures progress is saved if context compaction occurs mid-task. If resuming after compaction, check which component files already exist and which `/tmp/flow-screen-*.out.txt` files remain.
 
 ### Wire Up Navigation
 
