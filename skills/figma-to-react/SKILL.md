@@ -20,7 +20,7 @@ Before using this skill, ensure:
 
 2. **Browser automation** for visual verification (configurable)
    - Default: `dev-browser` skill
-   - Alternatives: `playwright`, `puppeteer`, or skip verification entirely
+   - Alternatives: `chrome-devtools-mcp`, `playwright`, `puppeteer`, or skip verification
 
 3. **Project has React + Tailwind CSS**
    - Dev server runnable via `pnpm dev`, `npm run dev`, or similar
@@ -43,7 +43,7 @@ Gather ALL configuration upfront before starting work. Use `AskUserQuestion` for
 | 6 | **DeviceFrame component** | Glob for `**/DeviceFrame.tsx`, `**/PhoneFrame.tsx`, `**/IPhoneFrame.tsx` |
 | 7 | **Container mode** | Infer from Figma (phone bezel = phone-frame, modal chrome = modal) |
 | 8 | **Brand substitutions** | Scan package.json, README, existing components for company/bank names |
-| 9 | **Browser tool** | Default: `dev-browser`. Options: `dev-browser`, `playwright`, `puppeteer`, or skip verification |
+| 9 | **Browser tool** | Default: `dev-browser`. Options: `dev-browser`, `chrome-devtools-mcp`, `playwright`, `puppeteer`, or skip |
 | 10 | **Dev server command** | Auto-detect (see below) |
 | 11 | **Dev server URL** | Auto-detect (see below) |
 
@@ -547,6 +547,7 @@ Use the configured browser tool to verify each screen matches Figma pixel-perfec
 | Tool | How to use |
 |------|------------|
 | `dev-browser` (default) | Use the dev-browser skill for navigation and screenshots |
+| `chrome-devtools-mcp` | Use `mcp__chrome-devtools__*` tools (requires Chrome with `--remote-debugging-port=9222`) |
 | `playwright` | Run `npx playwright` commands via Bash |
 | `puppeteer` | Run puppeteer scripts via Bash |
 | `skip` | Skip visual verification phase |
