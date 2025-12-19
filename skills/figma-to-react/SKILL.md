@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.3.4
+version: 1.4.0
 description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
@@ -11,17 +11,52 @@ allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch mcp__figma__get_meta
 
 Convert Figma screen flows into TypeScript React components with local assets.
 
-## Step 1: Get Figma URL & Auto-Detect Configuration
+## Prerequisites: Hook Setup
 
-### 1.1 Download Asset Script
+This skill uses a PostToolUse hook to capture Figma MCP responses verbatim (bypassing LLM transcription).
 
-Download the asset processing script:
+**If installed as a plugin:** Hooks are auto-configured. Just restart Claude Code after installing.
 
-```bash
-curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/process-figma-assets.sh" -o /tmp/process-figma-assets.sh && chmod +x /tmp/process-figma-assets.sh
+**If using skill directly:** Add hook to `.claude/settings.json`:
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__plugin_figma_figma__get_design_context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'MARKER=\"/tmp/figma-skill-capture-active\"; OUTPUT_DIR=\"/tmp/figma-captures\"; if [ ! -f \"$MARKER\" ]; then cat > /dev/null; echo \"{\\\"decision\\\": \\\"allow\\\"}\"; exit 0; fi; INPUT=$(cat); mkdir -p \"$OUTPUT_DIR\"; NODE_ID=$(echo \"$INPUT\" | jq -r \".tool_input.nodeId // \\\"unknown\\\"\" 2>/dev/null | tr \":\" \"-\"); echo \"$INPUT\" | jq -r \".tool_response // empty\" > \"${OUTPUT_DIR}/figma-${NODE_ID}.txt\"; echo \"{\\\"decision\\\": \\\"allow\\\"}\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-Local path (if running from plugin): `scripts/process-figma-assets.sh`
+**Restart Claude Code** after configuring hooks.
+
+The hook only activates when `/tmp/figma-skill-capture-active` marker exists, so it won't interfere with other Figma MCP usage.
+
+## Step 1: Get Figma URL & Auto-Detect Configuration
+
+### 1.1 Download Scripts
+
+Download the processing scripts:
+
+```bash
+# Asset processing script
+curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/process-figma-assets.sh" -o /tmp/process-figma-assets.sh && chmod +x /tmp/process-figma-assets.sh
+
+# Component creation script
+curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/create-component.sh" -o /tmp/create-component.sh && chmod +x /tmp/create-component.sh
+```
+
+Local paths (if running from plugin):
+- `scripts/process-figma-assets.sh`
+- `scripts/create-component.sh`
 
 ### 1.2 Get Figma URL
 
@@ -86,31 +121,64 @@ If user chooses "Adjust settings", ask about:
 
 ## Step 2: Extract All Screens
 
-For each screen node ID, call `mcp__figma__get_design_context(fileKey, nodeId)` and save the **complete** response to a temp file:
+### 2.1 Arm the capture hook
 
 ```bash
-# /tmp/flow-screen-1.txt, /tmp/flow-screen-2.txt, etc.
+touch /tmp/figma-skill-capture-active
+mkdir -p /tmp/figma-captures
 ```
 
-**IMPORTANT:** Save the ENTIRE response, including:
-- Asset const declarations (`const img = "..."`)
-- The full React component code (`export default function...` with all JSX)
+### 2.2 Call Figma MCP for each screen
 
-Do NOT truncate or save only the asset declarations. The full component code is required.
+For each screen node ID, call `mcp__figma__get_design_context(fileKey, nodeId)`.
 
-**Verify completeness** after saving all screens:
+The PostToolUse hook automatically captures each response verbatim to:
+```
+/tmp/figma-captures/figma-{nodeId}.txt
+```
+
+For example, nodeId `2006:2038` → `/tmp/figma-captures/figma-2006-2038.txt`
+
+**Parallelization:** These calls are independent — extract all screens in parallel for faster processing.
+
+### 2.3 Verify captures and disarm hook
+
+```bash
+# Verify all screens were captured
+for NODE_ID in "2006-2038" "2006-2062" "2006-2075"; do
+  if [ -f "/tmp/figma-captures/figma-${NODE_ID}.txt" ]; then
+    echo "✓ Captured: $NODE_ID"
+  else
+    echo "✗ Missing: $NODE_ID"
+  fi
+done
+
+# Disarm the hook
+rm /tmp/figma-skill-capture-active
+```
+
+**Verify completeness** of captured files:
 ```bash
 # Should output nothing if all files are complete
-for f in /tmp/flow-screen-*.txt; do
+for f in /tmp/figma-captures/figma-*.txt; do
   grep -q "export default function\|export function" "$f" || echo "INCOMPLETE: $f"
 done
 ```
 
-If any files are incomplete (missing component code), re-fetch them from Figma MCP.
+If any files are incomplete, re-arm the hook and re-fetch from Figma MCP.
 
-**Parallelization:** These calls are independent — extract all screens in parallel for faster processing.
+### 2.4 Copy to numbered files for asset processing
 
-The response includes:
+```bash
+# Copy captured files to numbered format expected by asset script
+i=1
+for NODE_ID in "2006-2038" "2006-2062" "2006-2075"; do
+  cp "/tmp/figma-captures/figma-${NODE_ID}.txt" "/tmp/flow-screen-${i}.txt"
+  i=$((i + 1))
+done
+```
+
+The captured response includes:
 - Full React/TypeScript code with Tailwind classes
 - Asset URLs as `const imgXxx = "https://www.figma.com/api/mcp/asset/..."`
 - `data-name` attributes with layer names (use for component naming)
@@ -130,46 +198,90 @@ Output: `flow-screen-1.out.txt`, `flow-screen-2.out.txt`, etc. with:
 
 ## Step 4: Rename Generic Assets
 
-Check the asset directory for generic names and rename to meaningful ones:
+Check the asset directory for generic names and rename to meaningful ones.
+
+**IMPORTANT:** Use the **Component descriptions** from the Figma MCP response to identify assets. These are at the end of the captured response and provide reliable naming hints:
+
+```
+## x
+**Node ID:** 3:439
+Source: boxicons --- 🔎 icon, x, close
+
+## arrow-back
+**Node ID:** 3:441
+Source: boxicons --- 🔎 icon, arrow, back
+
+## car
+**Node ID:** 2006:1961
+Source: boxicons --- 🔎 icon, car, driver's license
+```
+
+**Do NOT** try to interpret SVG path data - it's unreliable. Use component descriptions.
 
 | Generic | → | Meaningful |
 |---------|---|------------|
-| `img.svg` | → | `x-icon.svg` (it's a close icon) |
-| `img-1.svg` | → | `arrow-back.svg` (it's a back arrow) |
-| `img-2.svg` | → | `onfido-wordmark.svg` (Onfido text logo) |
-| `rectangle-266.svg` | → | `head-turn-guide.svg` (animation guide) |
+| `img.svg` | → | `x-close.svg` (from description: "x, close") |
+| `img-1.svg` | → | `arrow-back.svg` (from description: "arrow, back") |
+| `img-2.svg` | → | `car.svg` (from description: "car, driver's license") |
 
 To identify what an asset is:
-- Read SVG files to see the shapes/paths
-- Check component descriptions from Figma MCP (e.g., "x" = close icon)
-- Look at context where it's used (e.g., "Navigation Bar" → probably nav icons)
+1. **Primary:** Check Component descriptions at end of Figma MCP response
+2. **Secondary:** Look at `alt` attributes in the JSX (e.g., `alt="Close"`)
+3. **Fallback:** Look at context where it's used (e.g., "Navigation Bar" → nav icons)
 
-After renaming, update references in the `.out.txt` files.
+After renaming, update references in the `.out.txt` files:
+```bash
+# Example: rename img.svg to x-close.svg
+mv public/assets/img.svg public/assets/x-close.svg
+sed -i '' 's|/assets/img.svg|/assets/x-close.svg|g' /tmp/flow-screen-*.out.txt
+```
 
 ## Step 5: Generate Components
 
-For each screen, read the `.out.txt` file and create a React component.
+Component generation uses a **two-phase approach** to ensure verbatim code:
 
-**IMPORTANT: Use Figma MCP output verbatim.** Do not simplify, rewrite, or "clean up" the JSX structure. The nested divs, absolute positioning, and percentage insets are intentional - they ensure pixel-perfect rendering. Rewriting loses fidelity.
+### Phase 1: Create base components (bash - no LLM transcription)
 
-```typescript
-// src/onfido/screens/MotionMobile2Screen.tsx
-import type { ScreenProps } from '../registry';
+Use the `create-component.sh` script to transform .out.txt files into component files:
 
-export function MotionMobile2Screen({ onNext, onBack, onClose }: ScreenProps) {
-  return (
-    // PASTE the code from flow-screen-2.out.txt verbatim
-    // Only modify to: wire up onClick handlers, add state for interactivity
-    // Do NOT restructure or simplify the JSX
-  );
-}
+```bash
+# Download script (or use local if running from plugin)
+curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/create-component.sh" -o /tmp/create-component.sh && chmod +x /tmp/create-component.sh
+
+# Create each component
+/tmp/create-component.sh /tmp/flow-screen-1.out.txt DocumentSelectScreen src/onfido/screens/DocumentSelectScreen.tsx
+/tmp/create-component.sh /tmp/flow-screen-2.out.txt CaptureScreen src/onfido/screens/CaptureScreen.tsx
+/tmp/create-component.sh /tmp/flow-screen-3.out.txt SuccessScreen src/onfido/screens/SuccessScreen.tsx
 ```
 
-Derive component name from `data-name` attribute: `"Motion / Mobile 2"` → `MotionMobile2Screen`
+The script:
+- Adds `import type { ScreenProps } from '../registry';`
+- Changes `export default function X()` to `export function ComponentName({ onNext, onBack, onClose }: ScreenProps)`
+- Keeps **ALL JSX verbatim** - no simplification
 
-**Parallelization:** Component generation is independent per screen — generate all components in parallel.
+Derive component names from `data-name` attribute: `"Document / Small 1"` → `DocumentSelectScreen`
 
-**Resilience:** Write each component file to disk immediately after generating. This ensures progress is saved if context compaction occurs mid-task. If resuming after compaction, check which component files already exist and which `/tmp/flow-screen-*.out.txt` files remain.
+### Phase 2: Wire up interactivity (LLM edit pass)
+
+After base components are created, use the **Edit tool** to add:
+
+1. **onClick handlers** - Find navigation elements and add handlers:
+   - Back arrows → `onClick={onBack}`
+   - X/close icons → `onClick={onClose}`
+   - CTAs/buttons → `onClick={onNext}`
+
+2. **Form state** - Add useState for interactive elements:
+   ```typescript
+   const [selected, setSelected] = useState<string | null>(null);
+   ```
+
+3. **Cursor styles** - Add `cursor-pointer` to clickable elements
+
+**IMPORTANT:** Use targeted Edit tool calls on specific lines. Do NOT rewrite entire files.
+
+**Parallelization:** Phase 1 (bash) can run for all screens. Phase 2 edits are independent per screen.
+
+**Resilience:** Phase 1 creates files immediately. If context compaction occurs, check which files exist before Phase 2.
 
 ### Wire Up Navigation
 
@@ -305,21 +417,32 @@ mcp__figma__get_screenshot(fileKey, nodeId)     → Visual reference image
 mcp__figma__get_design_context(fileKey, nodeId) → React code + asset URLs
 ```
 
-### Asset Script Flow
+### Extraction Flow (Hook-Based)
 
 ```
-1. Download script from GitHub (or use local: scripts/process-figma-assets.sh)
-2. get_design_context for each screen → save to /tmp/flow-screen-{i}.txt
-3. Run: /tmp/process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
-4. Script downloads assets, dedupes by content hash, transforms code
-5. Output: flow-screen-{i}.out.txt with local asset paths
-6. Rename generic assets (img-1.svg → arrow-back.svg)
-7. Use transformed code in components
+1. Arm hook: touch /tmp/figma-skill-capture-active
+2. Call get_design_context for each screen → hook captures to /tmp/figma-captures/figma-{nodeId}.txt
+3. Verify captures, disarm hook: rm /tmp/figma-skill-capture-active
+4. Copy to numbered files: /tmp/flow-screen-{i}.txt
+5. Run: /tmp/process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
+6. Output: flow-screen-{i}.out.txt with local asset paths
+7. Rename generic assets using Component Descriptions (not SVG interpretation)
+8. Run: /tmp/create-component.sh {input.out.txt} {ComponentName} {output.tsx}
+9. Edit pass: Add onClick handlers and useState for interactivity
 ```
+
+### Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `process-figma-assets.sh` | Download assets, dedupe, transform URLs to local paths |
+| `create-component.sh` | Transform .out.txt to component file (verbatim, no LLM) |
+| `capture-figma-response.sh` | PostToolUse hook for verbatim MCP capture |
 
 ### Key Rules
 
 - Never use Figma asset URLs in generated code (must be local paths)
 - Deduplicate assets by content hash (Figma generates unique URLs per request)
 - Detect actual file type with `file` command (don't trust extensions)
-- Rename generic assets to meaningful names based on content/context
+- Rename assets using Component Descriptions from Figma MCP (not SVG path interpretation)
+- Hook captures ensure verbatim code - do not simplify or restructure JSX

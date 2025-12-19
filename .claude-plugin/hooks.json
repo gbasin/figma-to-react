@@ -1,0 +1,17 @@
+{
+  "description": "Hooks for figma-to-react plugin - captures Figma MCP responses verbatim",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__plugin_figma_figma__get_design_context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/skills/figma-to-react/hooks/capture-figma-response.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
