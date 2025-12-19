@@ -20,6 +20,8 @@ A Claude Code plugin that converts Figma screen flows into pixel-perfect TypeScr
 
 2. **React + Tailwind CSS** project (Figma MCP outputs Tailwind classes)
 
+3. **Hooks** — Auto-configured on plugin install. Restart Claude Code after installing to activate.
+
 ## Installation
 
 ```bash

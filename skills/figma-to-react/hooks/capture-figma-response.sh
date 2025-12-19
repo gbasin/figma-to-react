@@ -27,9 +27,11 @@ if [ -z "$NODE_ID" ] || [ "$NODE_ID" = "null" ]; then
   NODE_ID="unknown-$(date +%s)"
 fi
 
-# Create output directory and extract the tool_response
+# Create output directory and extract the code from tool_response
+# The tool_response is a JSON array: [{"type": "text", "text": "...code..."}, ...]
+# We want just the first text block's content (the actual React code)
 mkdir -p "$OUTPUT_DIR"
-echo "$INPUT" | jq -r '.tool_response // empty' > "${OUTPUT_DIR}/figma-${NODE_ID}.txt"
+echo "$INPUT" | jq -r '.tool_response[0].text // .tool_response // empty' > "${OUTPUT_DIR}/figma-${NODE_ID}.txt"
 
 # Log capture for debugging (goes to stderr, visible in hook output)
 echo "Captured Figma response for node ${NODE_ID} -> ${OUTPUT_DIR}/figma-${NODE_ID}.txt" >&2

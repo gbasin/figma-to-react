@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.4.0
+version: 1.4.1
 description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
@@ -27,7 +27,7 @@ This skill uses a PostToolUse hook to capture Figma MCP responses verbatim (bypa
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'MARKER=\"/tmp/figma-skill-capture-active\"; OUTPUT_DIR=\"/tmp/figma-captures\"; if [ ! -f \"$MARKER\" ]; then cat > /dev/null; echo \"{\\\"decision\\\": \\\"allow\\\"}\"; exit 0; fi; INPUT=$(cat); mkdir -p \"$OUTPUT_DIR\"; NODE_ID=$(echo \"$INPUT\" | jq -r \".tool_input.nodeId // \\\"unknown\\\"\" 2>/dev/null | tr \":\" \"-\"); echo \"$INPUT\" | jq -r \".tool_response // empty\" > \"${OUTPUT_DIR}/figma-${NODE_ID}.txt\"; echo \"{\\\"decision\\\": \\\"allow\\\"}\"'"
+            "command": "bash -c 'MARKER=\"/tmp/figma-skill-capture-active\"; OUTPUT_DIR=\"/tmp/figma-captures\"; if [ ! -f \"$MARKER\" ]; then cat > /dev/null; echo \"{\\\"decision\\\": \\\"allow\\\"}\"; exit 0; fi; INPUT=$(cat); mkdir -p \"$OUTPUT_DIR\"; NODE_ID=$(echo \"$INPUT\" | jq -r \".tool_input.nodeId // \\\"unknown\\\"\" 2>/dev/null | tr \":\" \"-\"); echo \"$INPUT\" | jq -r \".tool_response[0].text // .tool_response // empty\" > \"${OUTPUT_DIR}/figma-${NODE_ID}.txt\"; echo \"{\\\"decision\\\": \\\"allow\\\"}\"'"
           }
         ]
       }
@@ -242,12 +242,9 @@ Component generation uses a **two-phase approach** to ensure verbatim code:
 
 ### Phase 1: Create base components (bash - no LLM transcription)
 
-Use the `create-component.sh` script to transform .out.txt files into component files:
+Use the `create-component.sh` script (downloaded in Step 1) to transform .out.txt files into component files:
 
 ```bash
-# Download script (or use local if running from plugin)
-curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/create-component.sh" -o /tmp/create-component.sh && chmod +x /tmp/create-component.sh
-
 # Create each component
 /tmp/create-component.sh /tmp/flow-screen-1.out.txt DocumentSelectScreen src/onfido/screens/DocumentSelectScreen.tsx
 /tmp/create-component.sh /tmp/flow-screen-2.out.txt CaptureScreen src/onfido/screens/CaptureScreen.tsx
