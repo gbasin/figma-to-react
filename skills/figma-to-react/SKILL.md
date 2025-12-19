@@ -22,37 +22,79 @@ This skill uses a **manifest file** as the single source of truth. The manifest:
 
 ## Phase 1: Configuration & Manifest Creation
 
-### Step 1.1: Gather Configuration
+### Step 1.1: Get Figma URL
 
-Use `AskUserQuestion` to collect:
+Use `AskUserQuestion` to get the Figma URL (required):
+- File URL: `https://www.figma.com/design/{fileKey}/{fileName}`
+- Or frame URL: `https://www.figma.com/design/{fileKey}/{fileName}?node-id=1-234`
 
-| Required | Question |
-|----------|----------|
-| ✅ | Figma URL (file or specific frame) |
-| Optional | Explicit screen node IDs (if auto-detect won't work) |
+### Step 1.2: Auto-Detect & Discover
 
-Auto-detect the rest:
-- **Flow name**: Derive from Figma file/frame name (kebab-case)
-- **Output directory**: Glob for `src/`, match project structure
-- **Asset directory**: Look for `public/` or `src/assets/`
-- **DeviceFrame**: Glob for `**/DeviceFrame.tsx`, `**/PhoneFrame.tsx`
-- **Container mode**: Infer from Figma (phone bezel → phone-frame, modal chrome → modal)
+Run these detections automatically:
 
-### Step 1.2: Discover Screens
-
-**If explicit node IDs provided:**
-- Parse and use in order provided
-
-**If auto-detecting:**
 ```
-mcp__figma__get_metadata(fileKey, parentNodeId)
-  → Filter for screen-like frames (consistent dimensions)
-  → Order by x-position (left-to-right) or by name
+1. SCREENS: Call mcp__figma__get_metadata(fileKey, nodeId)
+   → Filter for screen-like frames (consistent dimensions)
+   → Order by x-position (left-to-right) or by name
+   → Derive component names from layer names
+
+2. FLOW NAME: Derive from Figma file/frame name (kebab-case)
+
+3. OUTPUT DIR: Glob for src/, match project structure patterns
+
+4. ASSET DIR: Look for public/ or src/assets/
+
+5. DEVICE FRAME: Glob for **/DeviceFrame.tsx, **/PhoneFrame.tsx
+   → null if not found
+
+6. CONTAINER MODE: Infer from Figma frame dimensions
+   → 390x844 or similar = phone-frame
+   → Has overlay/backdrop = modal
+   → Otherwise = fullscreen
 ```
 
-### Step 1.3: Create Manifest
+### Step 1.3: Confirm Configuration with User
 
-**MANDATORY: Create `{flow-name}-manifest.json` before ANY other work.**
+**MANDATORY: Present all detected values for user confirmation before creating manifest.**
+
+Use `AskUserQuestion` to show detected configuration:
+
+```
+I've analyzed the Figma file and your project. Please confirm or adjust:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ DETECTED CONFIGURATION                                          │
+├─────────────────────────────────────────────────────────────────┤
+│ Flow name:      plaid-link (from Figma frame name)              │
+│ Output dir:     src/plaid/ (matches src/{feature}/ pattern)     │
+│ Asset dir:      public/plaid-assets/                            │
+│ Device frame:   src/components/DeviceFrame.tsx (found)          │
+│ Container:      phone-frame (390x844 frames detected)           │
+├─────────────────────────────────────────────────────────────────┤
+│ SCREENS DETECTED (5)                                            │
+├─────────────────────────────────────────────────────────────────┤
+│  1. "01 - Welcome" (1:234)      → WelcomeScreen.tsx             │
+│  2. "02 - Select Bank" (1:567)  → SelectBankScreen.tsx          │
+│  3. "03 - Credentials" (1:890)  → CredentialsScreen.tsx         │
+│  4. "04 - Loading" (1:901)      → LoadingScreen.tsx             │
+│  5. "05 - Success" (1:912)      → SuccessScreen.tsx             │
+└─────────────────────────────────────────────────────────────────┘
+
+Options:
+1. Proceed with detected configuration
+2. Adjust settings (I'll ask follow-up questions)
+```
+
+**If user chooses "Adjust settings"**, ask specific follow-up questions:
+- Different flow name?
+- Different output directory?
+- Exclude any screens?
+- Different screen order?
+- Override container mode?
+
+### Step 1.4: Create Manifest
+
+**Only after user confirms configuration, create `{flow-name}-manifest.json`.**
 
 ```json
 {
