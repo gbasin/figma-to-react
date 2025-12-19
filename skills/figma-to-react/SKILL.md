@@ -53,6 +53,12 @@ Run these detections automatically:
    → 390x844 or similar = phone-frame
    → Has overlay/backdrop = modal
    → Otherwise = fullscreen
+
+7. VERIFICATION TOOL: Check available browser automation options
+   → Check if mcp__claude-in-chrome__* tools available → "claude-in-chrome"
+   → Check if dev-browser skill available → "dev-browser"
+   → If neither available → "skip" (no visual verification)
+   → Default recommendation: first available tool, or "skip" if none
 ```
 
 ### Step 1.3: Confirm Configuration with User
