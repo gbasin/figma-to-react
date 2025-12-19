@@ -1,10 +1,10 @@
 ---
 name: figma-to-react
-version: 1.4.1
+version: 1.5.0
 description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch mcp__figma__get_metadata mcp__figma__get_screenshot mcp__figma__get_design_context AskUserQuestion
+allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch mcp__plugin_figma_figma__get_metadata mcp__plugin_figma_figma__get_screenshot mcp__plugin_figma_figma__get_design_context mcp__plugin_figma_figma-desktop__get_metadata mcp__plugin_figma_figma-desktop__get_screenshot mcp__plugin_figma_figma-desktop__get_design_context AskUserQuestion
 ---
 
 # Figma to React
@@ -140,6 +140,20 @@ The PostToolUse hook automatically captures each response verbatim to:
 For example, nodeId `2006:2038` → `/tmp/figma-captures/figma-2006-2038.txt`
 
 **Parallelization:** These calls are independent — extract all screens in parallel for faster processing.
+
+**Rate Limit Handling:**
+- If you hit a rate limit error (`-32002` or "rate limit"), immediately switch to **sequential extraction** (one screen at a time)
+- Wait 2-3 seconds between sequential calls
+- Alternatively, use the **figma-desktop MCP** (`mcp__plugin_figma_figma-desktop__get_design_context`) which has no rate limits but requires Figma desktop app to be open with the file
+- Both figma.com and figma-desktop MCPs are captured by the PostToolUse hook
+
+**MCP Options:**
+| MCP | When to use |
+|-----|-------------|
+| `mcp__plugin_figma_figma__*` | Default. Web-based, works without desktop app |
+| `mcp__plugin_figma_figma-desktop__*` | Fallback. No rate limits, requires Figma desktop open |
+
+If rate-limited on figma.com MCP, switch to figma-desktop for remaining screens.
 
 ### 2.3 Verify captures and disarm hook
 
@@ -408,11 +422,21 @@ Visit: http://localhost:5173/onfido
 
 ### Figma MCP Tools
 
+**figma.com MCP** (web-based, has rate limits):
 ```
-mcp__figma__get_metadata(fileKey, nodeId)       → Screen structure, child nodes
-mcp__figma__get_screenshot(fileKey, nodeId)     → Visual reference image
-mcp__figma__get_design_context(fileKey, nodeId) → React code + asset URLs
+mcp__plugin_figma_figma__get_metadata(fileKey, nodeId)       → Screen structure, child nodes
+mcp__plugin_figma_figma__get_screenshot(fileKey, nodeId)     → Visual reference image
+mcp__plugin_figma_figma__get_design_context(fileKey, nodeId) → React code + asset URLs
 ```
+
+**figma-desktop MCP** (requires desktop app, no rate limits):
+```
+mcp__plugin_figma_figma-desktop__get_metadata(nodeId)       → Screen structure (fileKey from open file)
+mcp__plugin_figma_figma-desktop__get_screenshot(nodeId)     → Visual reference image
+mcp__plugin_figma_figma-desktop__get_design_context(nodeId) → React code + asset URLs
+```
+
+Use figma-desktop as fallback if rate-limited on figma.com MCP.
 
 ### Extraction Flow (Hook-Based)
 
