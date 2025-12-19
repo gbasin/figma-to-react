@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.1.0
+version: 1.3.0
 description: Convert linear Figma screen flows into pixel-perfect React components with Tailwind CSS. Creates fully functional screens with iOS-native animations, interactive elements, and automated visual verification. Use when converting Figma mobile flows to React, building demo apps from designs, or replicating vendor UIs (like Plaid, Stripe, etc.).
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*) and dev-browser skill for visual verification. Node.js environment with React/Tailwind project.
@@ -204,7 +204,7 @@ Proceed? [Y/n]
 
 ---
 
-## Phase 2: Figma Extraction
+## Phase 2: Figma Extraction & Asset Download
 
 ### Gate Check
 ```
@@ -213,129 +213,163 @@ VERIFY phases.config.status === "complete"
 IF NOT → STOP, complete Phase 1
 ```
 
-### Step 2.1: Extract Each Screen (Parallel)
+### Step 2.1: Extract Screenshots
 
 For each screen in `manifest.screens`:
 
 ```
-1. Get screenshot:
-   mcp__figma__get_screenshot(fileKey, nodeId)
-   → Save to temp location
-   → UPDATE manifest: screens[i].extraction.screenshot = path
+Get screenshot:
+  mcp__figma__get_screenshot(fileKey, nodeId)
+  → Save to temp location
+  → UPDATE manifest: screens[i].extraction.screenshot = path
+```
 
-2. Get design context:
+### Step 2.2: Extract Design Context (All Screens)
+
+Extract design context for ALL screens, then process together for deduplication:
+
+```
+1. For each screen, get design context and save to temp file:
+
    mcp__figma__get_design_context(fileKey, nodeId)
+   → Save raw response to /tmp/{flow}-screen-{i}.txt
 
-   The response contains:
-   - React/Tailwind code with asset URLs as constants
-   - Component descriptions (e.g., "Source: boxicons --- icon, x, close")
-   - Design tokens (colors, typography)
+   (Figma MCP generates unique URLs per request, so the same icon
+   in different screens will have different URLs. We deduplicate by content.)
+
+2. After ALL screens extracted, run the asset processing script:
+
+   Write this script to `/tmp/process-figma-assets.sh`:
+
+   ```bash
+   #!/usr/bin/env bash
+   # Downloads Figma MCP assets, deduplicates by content hash, transforms code.
+   # Usage: ./process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
+   set -e
+   ASSET_DIR="${1:-.}"; URL_PREFIX="${2:-/assets}"; shift 2 2>/dev/null || true
+   mkdir -p "$ASSET_DIR"
+   ASSET_LIST="/tmp/figma-assets-$$.txt"; MAPPING_FILE="/tmp/figma-mapping-$$.txt"
+   HASH_MAP="/tmp/figma-hashes-$$.txt"; FILE_LIST="/tmp/figma-files-$$.txt"
+   trap "rm -f $ASSET_LIST $MAPPING_FILE $HASH_MAP $FILE_LIST /tmp/figma-input-$$-*.txt /tmp/figma-dl-$$-*.bin /tmp/figma-sed-$$.txt" EXIT
+   INPUT_COUNT=0; > "$FILE_LIST"
+   if [ $# -gt 0 ]; then
+       for f in "$@"; do cp "$f" "/tmp/figma-input-$$-$INPUT_COUNT.txt"; echo "$f" >> "$FILE_LIST"; INPUT_COUNT=$((INPUT_COUNT + 1)); done
+   else cat > "/tmp/figma-input-$$-0.txt"; echo "-" >> "$FILE_LIST"; INPUT_COUNT=1; fi
+   echo "Phase 1: Collecting assets from $INPUT_COUNT screen(s)..." >&2
+   > "$ASSET_LIST"
+   for i in $(seq 0 $((INPUT_COUNT - 1))); do
+       perl -ne 'while (/const\s+(\w+)\s*=\s*"(https:\/\/www\.figma\.com\/api\/mcp\/asset\/[^"]+)"/g) { print "$1|$2\n"; }' "/tmp/figma-input-$$-$i.txt" >> "$ASSET_LIST"
+   done
+   TOTAL_REFS=$(wc -l < "$ASSET_LIST" | tr -d ' '); UNIQUE_URLS=$(cut -d'|' -f2 "$ASSET_LIST" | sort -u | wc -l | tr -d ' ')
+   echo "Found $TOTAL_REFS asset references ($UNIQUE_URLS unique URLs)" >&2
+   echo "Phase 2: Downloading and deduplicating by content..." >&2
+   > "$MAPPING_FILE"; > "$HASH_MAP"
+   for URL in $(cut -d'|' -f2 "$ASSET_LIST" | sort -u); do
+       [ -z "$URL" ] && continue
+       VAR_NAME=$(grep "|$URL$" "$ASSET_LIST" | head -1 | cut -d'|' -f1)
+       BASE_NAME=$(echo "$VAR_NAME" | sed -E 's/^img([A-Z])/\1/' | sed -E 's/^img$/img/' | sed -E 's/^img([0-9])/img-\1/' | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')
+       TEMP_FILE="/tmp/figma-dl-$$-${BASE_NAME}.bin"; echo -n "  $BASE_NAME: " >&2
+       if ! curl -sL "$URL" -o "$TEMP_FILE"; then echo "FAILED" >&2; continue; fi
+       HASH=$(md5 -q "$TEMP_FILE" 2>/dev/null || md5sum "$TEMP_FILE" | cut -d' ' -f1)
+       EXISTING=$(grep "^$HASH|" "$HASH_MAP" | cut -d'|' -f2 || true)
+       if [ -n "$EXISTING" ]; then echo "duplicate of $EXISTING" >&2; rm "$TEMP_FILE"; URL_PATH="$EXISTING"
+       else
+           FILE_TYPE=$(file -b "$TEMP_FILE")
+           case "$FILE_TYPE" in *"SVG"*) EXT="svg";; *"PNG"*) EXT="png";; *"JPEG"*|*"JPG"*) EXT="jpg";; *"GIF"*) EXT="gif";; *"WebP"*) EXT="webp";;
+               *) if head -c 100 "$TEMP_FILE" | grep -q "<svg"; then EXT="svg"; else EXT="bin"; fi;; esac
+           FILENAME="${BASE_NAME}.${EXT}"; LOCAL_PATH="${ASSET_DIR}/${FILENAME}"; URL_PATH="${URL_PREFIX}/${FILENAME}"
+           if [ -f "$LOCAL_PATH" ]; then SHORT_HASH="${HASH:0:6}"; FILENAME="${BASE_NAME}-${SHORT_HASH}.${EXT}"; LOCAL_PATH="${ASSET_DIR}/${FILENAME}"; URL_PATH="${URL_PREFIX}/${FILENAME}"; fi
+           mv "$TEMP_FILE" "$LOCAL_PATH"; echo "$HASH|$URL_PATH" >> "$HASH_MAP"; echo "saved as $FILENAME ($EXT)" >&2
+       fi
+       echo "$URL|$URL_PATH" >> "$MAPPING_FILE"
+   done
+   UNIQUE_FILES=$(wc -l < "$HASH_MAP" | tr -d ' '); echo "Downloaded $UNIQUE_FILES unique assets (deduplicated by content)" >&2
+   echo "Phase 3: Transforming code..." >&2
+   SED_SCRIPT="/tmp/figma-sed-$$.txt"; > "$SED_SCRIPT"
+   while IFS='|' read -r VAR_NAME URL; do
+       [ -z "$VAR_NAME" ] && continue; LOCAL_PATH=$(grep "^$URL|" "$MAPPING_FILE" | head -1 | cut -d'|' -f2); [ -z "$LOCAL_PATH" ] && continue
+       echo "s|src={${VAR_NAME}}|src=\"${LOCAL_PATH}\"|g" >> "$SED_SCRIPT"; echo "s|src={ ${VAR_NAME} }|src=\"${LOCAL_PATH}\"|g" >> "$SED_SCRIPT"
+   done < "$ASSET_LIST"
+   i=0; while IFS= read -r ORIG_FILE; do
+       INPUT_FILE="/tmp/figma-input-$$-$i.txt"
+       OUTPUT=$(perl -pe 's/^const\s+\w+\s*=\s*"https:\/\/www\.figma\.com\/api\/mcp\/asset\/[^"]+";?\s*\n?//gm' "$INPUT_FILE")
+       if [ -s "$SED_SCRIPT" ]; then OUTPUT=$(echo "$OUTPUT" | sed -f "$SED_SCRIPT"); fi
+       if [ "$ORIG_FILE" = "-" ]; then echo "$OUTPUT"; else OUT_FILE="${ORIG_FILE%.txt}.out.txt"; echo "$OUTPUT" > "$OUT_FILE"; echo "  Wrote: $OUT_FILE" >&2; fi
+       i=$((i + 1))
+   done < "$FILE_LIST"
+   echo ""; echo "Summary: $TOTAL_REFS references -> $UNIQUE_FILES unique files" >&2
+   ```
+
+   Then run it:
+   ```bash
+   chmod +x /tmp/process-figma-assets.sh
+   /tmp/process-figma-assets.sh ./public/plaid-assets /plaid-assets \
+     /tmp/plaid-screen-1.txt /tmp/plaid-screen-2.txt /tmp/plaid-screen-3.txt
+   ```
+
+   Outputs: screen1.out.txt, screen2.out.txt, screen3.out.txt
+
+   The script:
+   - Collects all assets from all screens
+   - Downloads each unique URL
+   - Deduplicates by content hash (same icon = same file, even if URLs differ)
+   - Detects actual file type (SVG/PNG/JPG) using `file` command
+   - Replaces `src={imgXxx}` with local paths in the code
+   - Outputs transformed code to .out.txt files
+
+3. Review and rename generic assets:
+
+   After the script runs, check the asset directory for generic names:
+   - `img.svg`, `img-1.svg`, `img-2.svg` (generic)
+   - `rectangle-*.svg`, `frame-*.svg`, `group-*.svg` (generic)
+   - `image.png`, `image-1.png` (generic)
+
+   For each generic asset:
+   - Open the file to see what it actually is (SVG content, or view the image)
+   - Infer meaning from context (where it's used in the screens, nearby elements)
+   - Rename to something descriptive: `close-icon.svg`, `arrow-back.svg`, `logo.svg`
+   - Update all references in the .out.txt files
+
+   Example renames:
+   ```
+   img.svg → x-icon.svg (it's an X/close icon)
+   img-1.svg → arrow-back.svg (it's a back arrow)
+   img-2.svg → onfido-wordmark.svg (it's the Onfido text logo)
+   rectangle-266.svg → head-turn-guide-left.svg (it's part of a head-turn animation)
+   ```
+
+4. Use the transformed code output for component generation
 
    → UPDATE manifest: screens[i].extraction.designContext = "extracted"
    → UPDATE manifest: screens[i].extraction.status = "complete"
-
-3. Parse asset URLs from the code response
-
-   The Figma MCP embeds asset URLs like this:
-   ```javascript
-   const img = "https://www.figma.com/api/mcp/asset/16f61b3a-...";
-   const img1 = "https://www.figma.com/api/mcp/asset/62cda08c-...";
-   ```
-
-   For each asset URL found:
-   a. Extract the variable name (img, img1, img2, etc.)
-   b. Extract the URL
-   c. Infer asset type from component descriptions
-   d. Generate filename from description (e.g., "icon, x, close" → "close-icon.svg")
-   e. Add to manifest.assets[]:
-      ```json
-      {
-        "id": "close-icon",
-        "figma": {
-          "nodeId": "1:234",
-          "layerName": "icon, x, close",
-          "url": "https://www.figma.com/api/mcp/asset/16f61b3a-..."
-        },
-        "local": {
-          "fileName": "close-icon.svg",
-          "filePath": "public/plaid-assets/close-icon.svg",
-          "type": "svg"
-        },
-        "status": "pending",
-        "extractionMethod": null,
-        "failureReason": null,
-        "usedBy": ["WelcomeScreen"]
-      }
-      ```
-   f. Add asset ID to screens[i].assetRefs[]
 ```
 
-### Step 2.2: Update Manifest
+### Step 2.3: Update Manifest
 
 After ALL screens extracted:
 ```
 UPDATE manifest: phases.extraction.status = "complete"
-UPDATE manifest: phases.assets.status = "in_progress"
+UPDATE manifest: phases.assets.status = "complete"  (assets downloaded by script)
+UPDATE manifest: phases.architecture.status = "in_progress"
 ```
 
 **CHECKPOINT: Read manifest. Every screen must have `extraction.status === "complete"`**
 
 ---
 
-## Phase 3: Asset Download & Verification
+## Phase 3: Architecture (Skip Asset Download)
+
+Assets are now downloaded automatically during extraction by the `process-figma-assets.sh` script.
+Proceed directly to architecture.
 
 ### Gate Check
 ```
 READ manifest
 VERIFY phases.extraction.status === "complete"
-VERIFY ALL screens[].extraction.status === "complete"
 IF NOT → STOP, complete Phase 2
 ```
 
-### Step 3.1: Download Each Asset
-
-For each asset in `manifest.assets`:
-
-```
-1. Download from Figma MCP URL:
-   ```bash
-   curl -L "https://www.figma.com/api/mcp/asset/{uuid}" -o "{local.filePath}"
-   ```
-
-   Verify the file (size > 0, correct type).
-
-   IF success:
-     assets[i].status = "verified"
-     assets[i].extractionMethod = "direct"
-     UPDATE manifest
-     CONTINUE to next asset
-
-2. Fallback: Figma REST API (if MCP URL fails)
-   curl -H "X-Figma-Token: {token}" \
-     "https://api.figma.com/v1/images/{fileKey}?ids={nodeId}&format=png&scale=2"
-
-   IF success:
-     assets[i].status = "verified"
-     assets[i].extractionMethod = "api"
-
-3. Fallback: Screenshot extraction (images only, not SVGs)
-   Crop asset region from full screen screenshot.
-
-   IF success AND asset is NOT svg:
-     assets[i].status = "degraded"
-     assets[i].extractionMethod = "screenshot"
-
-4. All methods failed:
-   assets[i].status = "failed"
-   assets[i].failureReason = "{details}"
-   CONTINUE to next asset (don't stop)
-```
-
-If any assets need the Figma REST API, ask user for a token before proceeding.
-
-### Step 3.2: Complete Phase
-
-After attempting ALL assets (regardless of success/failure):
+### Step 3.1: Complete Phase
 
 ```
 UPDATE manifest: phases.assets.status = "complete"
@@ -507,24 +541,16 @@ FOR assetId IN screen.assetRefs:
     → Add to screen's failedAssets list for summary
 ```
 
-**Replace Figma URLs with local paths**
+**Assets are already transformed**
 
-The Figma MCP returns code with remote URLs:
-```javascript
-const img = "https://www.figma.com/api/mcp/asset/16f61b3a-...";
-<img src={img} />
-```
+The `process-figma-assets.sh` script in Phase 2 already:
+- Downloaded all assets with correct extensions
+- Replaced `src={imgXxx}` with local paths like `src="/assets/face.svg"`
+- Removed the const declarations
 
-Replace these with local paths:
-```javascript
-<img src="/plaid-assets/close-icon.svg" />
-```
+Use the transformed code directly. Only add placeholders for any failed downloads.
 
-Look up each asset in the manifest:
-- `manifest.assets[].figma.url` → the Figma URL in the code
-- `manifest.assets[].local.filePath` → the local path to use
-
-**Generate component with real assets or visible placeholders:**
+**Generate component:**
 
 ```typescript
 import type { ScreenProps } from '../registry';
@@ -821,15 +847,22 @@ mcp__figma__get_design_context(fileKey, nodeId) → Code + assets
 ### Asset Handling Flow
 
 ```
-Phase 2: EXTRACT
-  get_design_context returns: const img = "https://www.figma.com/api/mcp/asset/..."
-  → Parse URLs, add to manifest.assets[]
-                              ↓
-Phase 3: DOWNLOAD
-  curl -L "{figma_url}" -o "{local_path}"
-  → Update manifest.assets[].status = "verified"
-                              ↓
-Phase 5: GENERATE
-  Use local paths: <img src="/assets/close-icon.svg">
-  NOT Figma URLs: <img src="https://www.figma.com/api/mcp/asset/...">
+Phase 2: EXTRACT + DOWNLOAD (automated, batch all screens)
+
+  1. For each screen, call get_design_context(fileKey, nodeId)
+     → Save raw response to /tmp/{flow}-screen-{i}.txt
+
+  2. Write the asset processing script (see Phase 2 for full script)
+     Then process ALL screens for content-hash deduplication:
+     /tmp/process-figma-assets.sh ./public/assets /assets /tmp/flow-screen-1.txt /tmp/flow-screen-2.txt ...
+     → Outputs: flow-screen-1.out.txt, flow-screen-2.out.txt, ...
+
+  3. Script automatically:
+     - Downloads all unique URLs
+     - Deduplicates by content hash (same icon = same file)
+     - Detects types (SVG/PNG/JPG) with `file` command
+     - Replaces src={imgXxx} → src="/assets/face.svg"
+     - Outputs transformed code to .out.txt files
+
+  4. Use transformed code for component generation
 ```
