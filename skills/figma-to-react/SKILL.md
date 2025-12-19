@@ -13,13 +13,23 @@ Convert Figma screen flows into React components with local assets.
 
 ## Step 1: Get Figma URL & Auto-Detect Configuration
 
-### 1.1 Get Figma URL
+### 1.1 Download Asset Script
+
+Download the asset processing script:
+
+```bash
+curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/process-figma-assets.sh" -o /tmp/process-figma-assets.sh && chmod +x /tmp/process-figma-assets.sh
+```
+
+Local path (if running from plugin): `scripts/process-figma-assets.sh`
+
+### 1.2 Get Figma URL
 
 Ask user for the Figma URL:
 - File URL: `https://www.figma.com/design/{fileKey}/{fileName}`
 - Or frame URL: `https://www.figma.com/design/{fileKey}/{fileName}?node-id=1-234`
 
-### 1.2 Auto-Detect Everything
+### 1.3 Auto-Detect Everything
 
 Run these detections automatically:
 
@@ -39,7 +49,7 @@ Run these detections automatically:
    → Use for demo page container sizing
 ```
 
-### 1.3 Confirm with User
+### 1.4 Confirm with User
 
 Present all detected values for user confirmation:
 
@@ -91,70 +101,8 @@ The response includes:
 
 ## Step 3: Process Assets
 
-Write the asset processing script to `/tmp/process-figma-assets.sh`:
-
+Run the asset processing script (downloaded in Step 1):
 ```bash
-#!/usr/bin/env bash
-# Downloads Figma MCP assets, deduplicates by content hash, transforms code.
-# Usage: ./process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
-set -e
-ASSET_DIR="${1:-.}"; URL_PREFIX="${2:-/assets}"; shift 2 2>/dev/null || true
-mkdir -p "$ASSET_DIR"
-ASSET_LIST="/tmp/figma-assets-$$.txt"; MAPPING_FILE="/tmp/figma-mapping-$$.txt"
-HASH_MAP="/tmp/figma-hashes-$$.txt"; FILE_LIST="/tmp/figma-files-$$.txt"
-trap "rm -f $ASSET_LIST $MAPPING_FILE $HASH_MAP $FILE_LIST /tmp/figma-input-$$-*.txt /tmp/figma-dl-$$-*.bin /tmp/figma-sed-$$.txt" EXIT
-INPUT_COUNT=0; > "$FILE_LIST"
-if [ $# -gt 0 ]; then
-    for f in "$@"; do cp "$f" "/tmp/figma-input-$$-$INPUT_COUNT.txt"; echo "$f" >> "$FILE_LIST"; INPUT_COUNT=$((INPUT_COUNT + 1)); done
-else cat > "/tmp/figma-input-$$-0.txt"; echo "-" >> "$FILE_LIST"; INPUT_COUNT=1; fi
-echo "Collecting assets from $INPUT_COUNT screen(s)..." >&2
-> "$ASSET_LIST"
-for i in $(seq 0 $((INPUT_COUNT - 1))); do
-    perl -ne 'while (/const\s+(\w+)\s*=\s*"(https:\/\/www\.figma\.com\/api\/mcp\/asset\/[^"]+)"/g) { print "$1|$2\n"; }' "/tmp/figma-input-$$-$i.txt" >> "$ASSET_LIST"
-done
-TOTAL_REFS=$(wc -l < "$ASSET_LIST" | tr -d ' '); UNIQUE_URLS=$(cut -d'|' -f2 "$ASSET_LIST" | sort -u | wc -l | tr -d ' ')
-echo "Found $TOTAL_REFS asset references ($UNIQUE_URLS unique URLs)" >&2
-echo "Downloading and deduplicating by content..." >&2
-> "$MAPPING_FILE"; > "$HASH_MAP"
-for URL in $(cut -d'|' -f2 "$ASSET_LIST" | sort -u); do
-    [ -z "$URL" ] && continue
-    VAR_NAME=$(grep "|$URL$" "$ASSET_LIST" | head -1 | cut -d'|' -f1)
-    BASE_NAME=$(echo "$VAR_NAME" | sed -E 's/^img([A-Z])/\1/' | sed -E 's/^img$/img/' | sed -E 's/^img([0-9])/img-\1/' | sed -E 's/([a-z])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')
-    TEMP_FILE="/tmp/figma-dl-$$-${BASE_NAME}.bin"; echo -n "  $BASE_NAME: " >&2
-    if ! curl -sL "$URL" -o "$TEMP_FILE"; then echo "FAILED" >&2; continue; fi
-    HASH=$(md5 -q "$TEMP_FILE" 2>/dev/null || md5sum "$TEMP_FILE" | cut -d' ' -f1)
-    EXISTING=$(grep "^$HASH|" "$HASH_MAP" | cut -d'|' -f2 || true)
-    if [ -n "$EXISTING" ]; then echo "duplicate of $EXISTING" >&2; rm "$TEMP_FILE"; URL_PATH="$EXISTING"
-    else
-        FILE_TYPE=$(file -b "$TEMP_FILE")
-        case "$FILE_TYPE" in *"SVG"*) EXT="svg";; *"PNG"*) EXT="png";; *"JPEG"*|*"JPG"*) EXT="jpg";; *"GIF"*) EXT="gif";; *"WebP"*) EXT="webp";;
-            *) if head -c 100 "$TEMP_FILE" | grep -q "<svg"; then EXT="svg"; else EXT="bin"; fi;; esac
-        FILENAME="${BASE_NAME}.${EXT}"; LOCAL_PATH="${ASSET_DIR}/${FILENAME}"; URL_PATH="${URL_PREFIX}/${FILENAME}"
-        if [ -f "$LOCAL_PATH" ]; then SHORT_HASH="${HASH:0:6}"; FILENAME="${BASE_NAME}-${SHORT_HASH}.${EXT}"; LOCAL_PATH="${ASSET_DIR}/${FILENAME}"; URL_PATH="${URL_PREFIX}/${FILENAME}"; fi
-        mv "$TEMP_FILE" "$LOCAL_PATH"; echo "$HASH|$URL_PATH" >> "$HASH_MAP"; echo "saved as $FILENAME ($EXT)" >&2
-    fi
-    echo "$URL|$URL_PATH" >> "$MAPPING_FILE"
-done
-UNIQUE_FILES=$(wc -l < "$HASH_MAP" | tr -d ' '); echo "Downloaded $UNIQUE_FILES unique assets" >&2
-echo "Transforming code..." >&2
-SED_SCRIPT="/tmp/figma-sed-$$.txt"; > "$SED_SCRIPT"
-while IFS='|' read -r VAR_NAME URL; do
-    [ -z "$VAR_NAME" ] && continue; LOCAL_PATH=$(grep "^$URL|" "$MAPPING_FILE" | head -1 | cut -d'|' -f2); [ -z "$LOCAL_PATH" ] && continue
-    echo "s|src={${VAR_NAME}}|src=\"${LOCAL_PATH}\"|g" >> "$SED_SCRIPT"; echo "s|src={ ${VAR_NAME} }|src=\"${LOCAL_PATH}\"|g" >> "$SED_SCRIPT"
-done < "$ASSET_LIST"
-i=0; while IFS= read -r ORIG_FILE; do
-    INPUT_FILE="/tmp/figma-input-$$-$i.txt"
-    OUTPUT=$(perl -pe 's/^const\s+\w+\s*=\s*"https:\/\/www\.figma\.com\/api\/mcp\/asset\/[^"]+";?\s*\n?//gm' "$INPUT_FILE")
-    if [ -s "$SED_SCRIPT" ]; then OUTPUT=$(echo "$OUTPUT" | sed -f "$SED_SCRIPT"); fi
-    if [ "$ORIG_FILE" = "-" ]; then echo "$OUTPUT"; else OUT_FILE="${ORIG_FILE%.txt}.out.txt"; echo "$OUTPUT" > "$OUT_FILE"; echo "  Wrote: $OUT_FILE" >&2; fi
-    i=$((i + 1))
-done < "$FILE_LIST"
-echo "Summary: $TOTAL_REFS references -> $UNIQUE_FILES unique files" >&2
-```
-
-Run it:
-```bash
-chmod +x /tmp/process-figma-assets.sh
 /tmp/process-figma-assets.sh ./public/onfido-assets /onfido-assets \
   /tmp/flow-screen-1.txt /tmp/flow-screen-2.txt /tmp/flow-screen-3.txt
 ```
@@ -255,12 +203,13 @@ mcp__figma__get_design_context(fileKey, nodeId) → React code + asset URLs
 ### Asset Script Flow
 
 ```
-1. get_design_context for each screen → save to /tmp/flow-screen-{i}.txt
-2. Run script: /tmp/process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
-3. Script downloads assets, dedupes by content hash, transforms code
-4. Output: flow-screen-{i}.out.txt with local asset paths
-5. Rename generic assets (img-1.svg → arrow-back.svg)
-6. Use transformed code in components
+1. Download script from GitHub (or use local: scripts/process-figma-assets.sh)
+2. get_design_context for each screen → save to /tmp/flow-screen-{i}.txt
+3. Run: /tmp/process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
+4. Script downloads assets, dedupes by content hash, transforms code
+5. Output: flow-screen-{i}.out.txt with local asset paths
+6. Rename generic assets (img-1.svg → arrow-back.svg)
+7. Use transformed code in components
 ```
 
 ### Key Rules
