@@ -1,25 +1,18 @@
 #!/bin/bash
 #
 # PostToolUse hook for capturing Figma MCP get_design_context responses
-# Only activates when /tmp/figma-skill-capture-active marker exists
 #
-# Creates TWO files per capture:
-#   1. /tmp/figma-captures/figma-{nodeId}.txt - raw JSON response (for debugging)
-#   2. /tmp/figma-captures/figma-{nodeId}.tsx - extracted React code (for processing)
+# Only activates when /tmp/figma-skill-capture-active marker exists.
+# Saves responses to /tmp/figma-captures/figma-{nodeId}.txt
 #
-# Also auto-creates numbered flow-screen files for asset processing:
-#   /tmp/flow-screen-{N}.txt - auto-incremented counter
-#
-# This ensures pixel-perfect code extraction without LLM transcription modifications
-#
+# This ensures verbatim code capture without LLM transcription modifications.
 
 MARKER="/tmp/figma-skill-capture-active"
 OUTPUT_DIR="/tmp/figma-captures"
-COUNTER_FILE="/tmp/figma-screen-counter"
 
 # Check if skill has armed the capture
 if [ ! -f "$MARKER" ]; then
-  # Skill not active - pass through silently (consume stdin)
+  # Skill not active - pass through silently
   cat > /dev/null
   echo '{"decision": "allow"}'
   exit 0
@@ -34,32 +27,44 @@ if [ -z "$NODE_ID" ] || [ "$NODE_ID" = "null" ]; then
   NODE_ID="unknown-$(date +%s)"
 fi
 
-# Get and increment counter for flow-screen numbering
-if [ -f "$COUNTER_FILE" ]; then
-  SCREEN_NUM=$(cat "$COUNTER_FILE")
-else
-  SCREEN_NUM=0
-fi
-SCREEN_NUM=$((SCREEN_NUM + 1))
-echo "$SCREEN_NUM" > "$COUNTER_FILE"
-
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
 
-# Extract the React code from tool_response
-# The tool_response is a JSON array: [{"type": "text", "text": "...code..."}, ...]
-CODE=$(echo "$INPUT" | jq -r '.tool_response[0].text // .tool_response // empty')
+# Extract the code from tool_response
+# The response can be:
+#   - A JSON array: [{"type": "text", "text": "...code..."}, ...]
+#   - A raw string
+# We need to get just the first text block which contains the React code
 
-# Save raw response for debugging
-echo "$INPUT" > "${OUTPUT_DIR}/figma-${NODE_ID}.json"
+OUTPUT_FILE="${OUTPUT_DIR}/figma-${NODE_ID}.txt"
 
-# Save extracted code
-echo "$CODE" > "${OUTPUT_DIR}/figma-${NODE_ID}.tsx"
+# Try to extract from JSON array structure
+CODE=$(echo "$INPUT" | jq -r '
+  if .tool_response | type == "array" then
+    .tool_response[0].text // empty
+  elif .tool_response | type == "string" then
+    .tool_response
+  else
+    empty
+  end
+' 2>/dev/null)
 
-# Also create numbered flow-screen file (used by process-figma-assets.sh)
-echo "$CODE" > "/tmp/flow-screen-${SCREEN_NUM}.txt"
+if [ -z "$CODE" ]; then
+  # Fallback: try to extract raw tool_response
+  CODE=$(echo "$INPUT" | jq -r '.tool_response // empty' 2>/dev/null)
+fi
 
-# Log capture for debugging (goes to stderr, visible in hook output)
-echo "✓ Captured node ${NODE_ID} -> flow-screen-${SCREEN_NUM}.txt (${#CODE} bytes)" >&2
+if [ -z "$CODE" ]; then
+  echo "Warning: Could not extract code from response" >&2
+  echo '{"decision": "allow"}'
+  exit 0
+fi
+
+# Save extracted code (jq already handles JSON string unescaping)
+printf '%s' "$CODE" > "$OUTPUT_FILE"
+
+# Log capture
+BYTES=$(wc -c < "$OUTPUT_FILE" | tr -d ' ')
+echo "✓ Captured: figma-${NODE_ID}.txt (${BYTES} bytes)" >&2
 
 echo '{"decision": "allow"}'
