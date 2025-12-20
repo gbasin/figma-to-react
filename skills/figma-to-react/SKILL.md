@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 2.0.0
+version: 1.0.0
 description: Convert Figma designs to pixel-perfect React components. Auto-extracts design tokens, downloads assets, and outputs production-ready code.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project.
@@ -16,6 +16,165 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 1. **Figma MCP** outputs React/TSX with Tailwind classes + temporary asset URLs
 2. **This skill** extracts design tokens, downloads assets, and outputs ready-to-use components
 3. **CSS variables** make the MCP output work directly (no manual code editing)
+
+---
+
+## AI-Assisted Workflow
+
+When the user invokes this skill, follow this workflow:
+
+### 1. Detect Project Structure
+
+Scan the codebase to detect framework and conventions:
+
+```bash
+# Check package.json for framework
+cat package.json | grep -E '"(react|next|vite|@vitejs)"'
+
+# Find existing component directories
+ls -d src/components/ components/ app/components/ 2>/dev/null
+
+# Find existing style directories
+ls -d src/styles/ styles/ src/css/ 2>/dev/null
+
+# Find public/static asset directories
+ls -d public/ static/ public/assets/ 2>/dev/null
+```
+
+### 2. Confirm Configuration with User
+
+Before processing, confirm paths with the user:
+
+```
+Detected: Vite + React + Tailwind
+
+Output paths (confirm or edit):
+  Components: src/components/
+  Assets:     public/figma-assets/
+  Tokens:     src/styles/figma-tokens.css
+  URL prefix: /figma-assets
+
+Proceed? [Y/n/edit]
+```
+
+Use `AskUserQuestion` if the user wants to customize paths.
+
+### 3. AI-Powered Naming
+
+Figma frame names are often generic ("Frame 1", "Mobile 3"). Use AI analysis to generate meaningful names.
+
+**For screens/components:**
+
+1. Get screenshot: `mcp__plugin_figma_figma__get_screenshot(nodeId: "...")`
+2. Analyze the screenshot visually
+3. Generate a descriptive component name based on:
+   - UI purpose (login, checkout, profile, etc.)
+   - Key elements visible (form, list, modal, etc.)
+   - Screen type (mobile, desktop, tablet)
+
+**For assets without descriptions:**
+
+1. After downloading assets, analyze each image
+2. Generate names based on visual content:
+   - Icons: `close-icon.svg`, `arrow-back.svg`, `menu-hamburger.svg`
+   - Images: `hero-background.png`, `user-avatar.png`
+   - Illustrations: `empty-state.svg`, `success-checkmark.svg`
+
+**Example AI naming flow:**
+
+```
+Analyzing screen "237:2571"...
+Screenshot shows: Motion capture UI with face outline, instruction text, camera frame
+
+Suggested name: MotionCaptureScreen
+  - Purpose: Identity verification face capture
+  - Key elements: camera frame, instruction overlay, navigation bar
+
+Use this name? [Y/n/custom]
+```
+
+### 4. Process with Confirmed Settings
+
+**Parse Figma URL** to extract fileKey and nodeId:
+```
+https://www.figma.com/design/{fileKey}/{fileName}?node-id={nodeId}
+```
+
+**Run the pipeline:**
+
+```bash
+# Arm capture hook
+touch /tmp/figma-skill-capture-active
+mkdir -p /tmp/figma-captures
+```
+
+Call MCP (use `figma-desktop` variant if rate limited):
+```
+mcp__plugin_figma_figma__get_design_context(
+  fileKey: "abc123",
+  nodeId: "237:2571",
+  clientFrameworks: "react",
+  clientLanguages: "typescript"
+)
+```
+
+The hook auto-saves response to `/tmp/figma-captures/figma-{nodeId}.txt`
+
+**Process captured response:**
+
+Scripts are in `./scripts/` relative to this SKILL.md. Use the absolute path based on where you loaded this file.
+
+```bash
+# Example (replace SKILL_DIR with actual path to this skill's directory):
+$SKILL_DIR/scripts/process-figma.sh \
+  /tmp/figma-captures/figma-237-2571.txt \
+  src/components/MotionCaptureScreen.tsx \
+  public/figma-assets \
+  /figma-assets \
+  src/styles/figma-tokens.css
+
+# Disarm hook
+rm /tmp/figma-skill-capture-active
+```
+
+**For multiple screens:** Loop over node IDs. Tokens merge automatically, assets deduplicate by content hash.
+
+```bash
+for node in "237-2571" "237-2572" "237-2573"; do
+  $SKILL_DIR/scripts/process-figma.sh \
+    /tmp/figma-captures/figma-${node}.txt \
+    src/components/${COMPONENT_NAME}.tsx \
+    public/figma-assets \
+    /figma-assets \
+    src/styles/figma-tokens.css
+done
+```
+
+**One-time setup:** Import tokens in main CSS:
+```css
+/* src/index.css */
+@import "./styles/figma-tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+### 5. AI Asset Renaming (Optional)
+
+After processing, offer to rename generic assets:
+
+```
+Found 12 assets with generic names. Analyze and rename?
+
+Current → Suggested:
+  asset.svg      → close-icon.svg (X shape, likely close button)
+  asset-1.svg    → back-arrow.svg (left-pointing arrow)
+  image.png      → face-capture-bg.png (blurred face photo)
+
+Apply renames? [Y/n/select]
+```
+
+---
 
 ## Prerequisites
 
@@ -40,117 +199,6 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
   }
 }
 ```
-
-## Quick Start
-
-### Step 1: Get Figma URL
-
-Get the frame URL from Figma:
-```
-https://www.figma.com/design/{fileKey}/{fileName}?node-id={nodeId}
-```
-
-### Step 2: Download Scripts
-
-```bash
-curl -sL "https://raw.githubusercontent.com/gbasin/figma-to-react/master/skills/figma-to-react/scripts/process-figma.sh" -o /tmp/process-figma.sh && chmod +x /tmp/process-figma.sh
-```
-
-### Step 3: Arm Capture Hook
-
-```bash
-touch /tmp/figma-skill-capture-active
-mkdir -p /tmp/figma-captures
-```
-
-### Step 4: Call Figma MCP
-
-```
-mcp__plugin_figma_figma__get_design_context(
-  fileKey: "YOUR_FILE_KEY",
-  nodeId: "123:456",
-  clientFrameworks: "react",
-  clientLanguages: "typescript"
-)
-```
-
-The hook automatically saves the response to `/tmp/figma-captures/figma-{nodeId}.txt`
-
-### Step 5: Process & Generate
-
-```bash
-/tmp/process-figma.sh \
-  /tmp/figma-captures/figma-123-456.txt \
-  src/components/MyScreen.tsx \
-  public/figma-assets \
-  /figma-assets \
-  src/styles/figma-tokens.css
-```
-
-This single command:
-- Downloads all assets (deduplicated by content hash)
-- Extracts design tokens to CSS variables
-- Outputs component with local asset paths
-
-### Step 6: Import Tokens
-
-Add to your main CSS (one-time setup):
-```css
-/* src/index.css */
-@import "./styles/figma-tokens.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-
-### Step 7: Disarm Hook
-
-```bash
-rm /tmp/figma-skill-capture-active
-```
-
-Done! Your component is ready at `src/components/MyScreen.tsx`
-
----
-
-## Multi-Screen Flows
-
-For flows with multiple screens:
-
-### 1. Arm hook and capture all screens
-
-```bash
-touch /tmp/figma-skill-capture-active
-mkdir -p /tmp/figma-captures
-```
-
-Call `get_design_context` for each screen (can be parallel if no rate limits).
-
-### 2. Process all screens
-
-```bash
-# Process each screen
-for node in "237-2571" "237-2572" "237-2573"; do
-  /tmp/process-figma.sh \
-    /tmp/figma-captures/figma-${node}.txt \
-    src/screens/Screen${node}.tsx \
-    public/assets \
-    /assets \
-    src/styles/figma-tokens.css
-done
-```
-
-Tokens are merged automatically - run on any/all screens, same result.
-
-### 3. Rename components
-
-```bash
-# Rename exports to meaningful names
-sed -i '' 's/export default function [A-Za-z0-9_]*/export default function WelcomeScreen/' src/screens/Screen237-2571.tsx
-mv src/screens/Screen237-2571.tsx src/screens/WelcomeScreen.tsx
-```
-
----
 
 ## Script Reference
 
@@ -275,17 +323,6 @@ public/
     ├── arrow-back.svg
     └── face-image.png
 ```
-
----
-
-## Comparison: Old vs New Approach
-
-| Old (v1.x) | New (v2.0) |
-|------------|------------|
-| Strip CSS vars, use fallbacks | Define CSS vars from fallbacks |
-| Complex escaping workarounds | MCP output works directly |
-| Multiple processing steps | Single `process-figma.sh` command |
-| Manual checkpoint verification | Automatic processing |
 
 ---
 
