@@ -3,12 +3,19 @@
 # PostToolUse hook for capturing Figma MCP get_design_context responses
 # Only activates when /tmp/figma-skill-capture-active marker exists
 #
-# Captures verbatim response to /tmp/figma-captures/figma-{nodeId}.txt
+# Creates TWO files per capture:
+#   1. /tmp/figma-captures/figma-{nodeId}.txt - raw JSON response (for debugging)
+#   2. /tmp/figma-captures/figma-{nodeId}.tsx - extracted React code (for processing)
+#
+# Also auto-creates numbered flow-screen files for asset processing:
+#   /tmp/flow-screen-{N}.txt - auto-incremented counter
+#
 # This ensures pixel-perfect code extraction without LLM transcription modifications
 #
 
 MARKER="/tmp/figma-skill-capture-active"
 OUTPUT_DIR="/tmp/figma-captures"
+COUNTER_FILE="/tmp/figma-screen-counter"
 
 # Check if skill has armed the capture
 if [ ! -f "$MARKER" ]; then
@@ -27,13 +34,32 @@ if [ -z "$NODE_ID" ] || [ "$NODE_ID" = "null" ]; then
   NODE_ID="unknown-$(date +%s)"
 fi
 
-# Create output directory and extract the code from tool_response
-# The tool_response is a JSON array: [{"type": "text", "text": "...code..."}, ...]
-# We want just the first text block's content (the actual React code)
+# Get and increment counter for flow-screen numbering
+if [ -f "$COUNTER_FILE" ]; then
+  SCREEN_NUM=$(cat "$COUNTER_FILE")
+else
+  SCREEN_NUM=0
+fi
+SCREEN_NUM=$((SCREEN_NUM + 1))
+echo "$SCREEN_NUM" > "$COUNTER_FILE"
+
+# Create output directory
 mkdir -p "$OUTPUT_DIR"
-echo "$INPUT" | jq -r '.tool_response[0].text // .tool_response // empty' > "${OUTPUT_DIR}/figma-${NODE_ID}.txt"
+
+# Extract the React code from tool_response
+# The tool_response is a JSON array: [{"type": "text", "text": "...code..."}, ...]
+CODE=$(echo "$INPUT" | jq -r '.tool_response[0].text // .tool_response // empty')
+
+# Save raw response for debugging
+echo "$INPUT" > "${OUTPUT_DIR}/figma-${NODE_ID}.json"
+
+# Save extracted code
+echo "$CODE" > "${OUTPUT_DIR}/figma-${NODE_ID}.tsx"
+
+# Also create numbered flow-screen file (used by process-figma-assets.sh)
+echo "$CODE" > "/tmp/flow-screen-${SCREEN_NUM}.txt"
 
 # Log capture for debugging (goes to stderr, visible in hook output)
-echo "Captured Figma response for node ${NODE_ID} -> ${OUTPUT_DIR}/figma-${NODE_ID}.txt" >&2
+echo "✓ Captured node ${NODE_ID} -> flow-screen-${SCREEN_NUM}.txt (${#CODE} bytes)" >&2
 
 echo '{"decision": "allow"}'

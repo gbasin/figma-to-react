@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 1.5.0
+version: 1.5.1
 description: Convert Figma screen flows into TypeScript React components. Extracts design context, downloads assets, and generates pixel-perfect components.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project (Figma MCP outputs Tailwind classes).
@@ -121,12 +121,27 @@ If user chooses "Adjust settings", ask about:
 
 ## Step 2: Extract All Screens
 
-### 2.1 Arm the capture hook
+### 2.1 Clean up and arm the capture hook
+
+**Clean up any previous run's files first** to prevent cross-contamination:
 
 ```bash
+# Clean previous captures and temp files
+rm -f /tmp/figma-skill-capture-active
+rm -f /tmp/figma-screen-counter
+rm -rf /tmp/figma-captures
+rm -f /tmp/flow-screen-*.txt /tmp/flow-screen-*.out.txt
+
+# Arm the hook and create capture directory
 touch /tmp/figma-skill-capture-active
 mkdir -p /tmp/figma-captures
 ```
+
+The hook will now **automatically** create:
+- `/tmp/figma-captures/figma-{nodeId}.tsx` - extracted React code
+- `/tmp/flow-screen-{N}.txt` - auto-numbered files for asset processing
+
+**The agent does NOT need to copy or transform the captured code.**
 
 ### 2.2 Call Figma MCP for each screen
 
@@ -181,16 +196,21 @@ done
 
 If any files are incomplete, re-arm the hook and re-fetch from Figma MCP.
 
-### 2.4 Copy to numbered files for asset processing
+### 2.4 Verify auto-generated flow-screen files
+
+The hook **automatically creates** `/tmp/flow-screen-{N}.txt` files. Verify they exist:
 
 ```bash
-# Copy captured files to numbered format expected by asset script
-i=1
-for NODE_ID in "2006-2038" "2006-2062" "2006-2075"; do
-  cp "/tmp/figma-captures/figma-${NODE_ID}.txt" "/tmp/flow-screen-${i}.txt"
-  i=$((i + 1))
-done
+# List auto-generated files
+ls -la /tmp/flow-screen-*.txt
+
+# Verify content is raw Figma output (should have CSS variables, data-node-id, etc.)
+head -20 /tmp/flow-screen-1.txt | grep -E "var\(--|data-node-id|font-\["
 ```
+
+**If files are missing or empty**, re-arm the hook and re-run the MCP calls.
+
+**CRITICAL:** The agent must NEVER manually write to these files. The hook ensures verbatim capture. If you see simplified code (no CSS variables, no data-node-id), the hook failed.
 
 The captured response includes:
 - Full React/TypeScript code with Tailwind classes
@@ -441,16 +461,19 @@ Use figma-desktop as fallback if rate-limited on figma.com MCP.
 ### Extraction Flow (Hook-Based)
 
 ```
-1. Arm hook: touch /tmp/figma-skill-capture-active
-2. Call get_design_context for each screen → hook captures to /tmp/figma-captures/figma-{nodeId}.txt
-3. Verify captures, disarm hook: rm /tmp/figma-skill-capture-active
-4. Copy to numbered files: /tmp/flow-screen-{i}.txt
-5. Run: /tmp/process-figma-assets.sh {assetDir} {urlPrefix} screen1.txt screen2.txt ...
-6. Output: flow-screen-{i}.out.txt with local asset paths
-7. Rename generic assets using Component Descriptions (not SVG interpretation)
-8. Run: /tmp/create-component.sh {input.out.txt} {ComponentName} {output.tsx}
-9. Edit pass: Add onClick handlers and useState for interactivity
+1. Clean up: rm -f /tmp/figma-skill-capture-active /tmp/figma-screen-counter && rm -rf /tmp/figma-captures && rm -f /tmp/flow-screen-*.txt
+2. Arm hook: touch /tmp/figma-skill-capture-active && mkdir -p /tmp/figma-captures
+3. Call get_design_context for each screen → hook AUTO-CREATES /tmp/flow-screen-{N}.txt
+4. Verify captures: ls /tmp/flow-screen-*.txt && head -20 /tmp/flow-screen-1.txt
+5. Disarm hook: rm /tmp/figma-skill-capture-active
+6. Run: /tmp/process-figma-assets.sh {assetDir} {urlPrefix} /tmp/flow-screen-*.txt
+7. Output: flow-screen-{i}.out.txt with local asset paths
+8. Rename generic assets using Component Descriptions (not SVG interpretation)
+9. Run: /tmp/create-component.sh {input.out.txt} {ComponentName} {output.tsx}
+10. Edit pass: Add onClick handlers and useState for interactivity
 ```
+
+**IMPORTANT:** The agent must NEVER write to flow-screen-*.txt files. The hook does this automatically.
 
 ### Scripts
 
