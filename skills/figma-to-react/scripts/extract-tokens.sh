@@ -35,19 +35,15 @@ trap "rm -f $TEMP_TOKENS" EXIT
 
 # Extract all var() patterns: var(--name,fallback)
 # Handle both escaped slashes (--name\/sub) and regular names (--name-sub)
-grep -oE 'var\(--[^)]+\)' "$INPUT" | sort -u | while read -r var; do
-  # Extract variable name (everything between var(-- and the comma)
-  name=$(echo "$var" | sed -E 's/var\((--[^,]+),.*/\1/')
-
-  # Extract fallback value (everything between comma and closing paren)
-  fallback=$(echo "$var" | sed -E 's/var\([^,]+,([^)]+)\)/\1/')
-
-  # Skip if we couldn't extract properly
-  [ -z "$name" ] || [ -z "$fallback" ] && continue
-
-  # Output: name|fallback (pipe-separated for easy parsing)
-  echo "${name}|${fallback}"
-done > "$TEMP_TOKENS"
+# Note: Fallback values can contain nested parens like rgba(0,0,0,0.8)
+# Use perl for reliable extraction across platforms
+perl -ne '
+  # Match var(--name,fallback) with 1-level nested parens support
+  # (?:[^()]|\([^()]*\))+ matches either non-parens or a balanced (...)
+  while (/var\((--[^,)]+),((?:[^()]|\([^()]*\))+)\)/g) {
+    print "$1|$2\n";
+  }
+' "$INPUT" | sort -u > "$TEMP_TOKENS"
 
 # Count tokens found
 TOKEN_COUNT=$(wc -l < "$TEMP_TOKENS" | tr -d ' ')

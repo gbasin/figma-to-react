@@ -92,7 +92,10 @@ echo "Step 2: Processing assets..." >&2
 # Extract all asset URLs and their variable names
 # Format: varName|url
 # Use perl for reliable cross-platform regex
-perl -ne 'if (/const\s+(\w+)\s*=\s*"(https?:\/\/(?:www\.)?figma\.com\/api\/mcp\/asset\/[^"]+)"/) { print "$1|$2\n"; }' "$INPUT" > "$ASSET_LIST" || true
+# Supports both:
+#   - Remote Figma MCP: https://figma.com/api/mcp/asset/...
+#   - Local Figma Desktop MCP: http://localhost:PORT/assets/...
+perl -ne 'if (/const\s+(\w+)\s*=\s*"(https?:\/\/(?:(?:www\.)?figma\.com\/api\/mcp\/asset|localhost:\d+\/assets)\/[^"]+)"/) { print "$1|$2\n"; }' "$INPUT" > "$ASSET_LIST" || true
 
 TOTAL_REFS=$(wc -l < "$ASSET_LIST" | tr -d ' ')
 UNIQUE_URLS=$(cut -d'|' -f2 "$ASSET_LIST" | sort -u | wc -l | tr -d ' ')

@@ -33,24 +33,39 @@ mkdir -p "$OUTPUT_DIR"
 # Extract the code from tool_response
 # The response can be:
 #   - A JSON array: [{"type": "text", "text": "...code..."}, ...]
+#   - A JSON string containing a serialized array: "[{\"type\": \"text\", ...}]"
 #   - A raw string
 # We need to get just the first text block which contains the React code
 
 OUTPUT_FILE="${OUTPUT_DIR}/figma-${NODE_ID}.txt"
 
-# Try to extract from JSON array structure
+# Try to extract from JSON - handle both parsed arrays and serialized JSON strings
 CODE=$(echo "$INPUT" | jq -r '
-  if .tool_response | type == "array" then
-    .tool_response[0].text // empty
-  elif .tool_response | type == "string" then
-    .tool_response
+  # Get tool_response
+  .tool_response as $resp |
+
+  # If it is an array, get first text element
+  if ($resp | type) == "array" then
+    $resp[0].text // empty
+
+  # If it is a string, try to parse it as JSON
+  elif ($resp | type) == "string" then
+    # Try to parse as JSON array
+    (try ($resp | fromjson) catch null) as $parsed |
+    if ($parsed | type) == "array" then
+      $parsed[0].text // empty
+    else
+      # Not parseable as array, return as-is
+      $resp
+    end
+
   else
     empty
   end
 ' 2>/dev/null)
 
 if [ -z "$CODE" ]; then
-  # Fallback: try to extract raw tool_response
+  # Fallback: try to extract raw tool_response as string
   CODE=$(echo "$INPUT" | jq -r '.tool_response // empty' 2>/dev/null)
 fi
 
