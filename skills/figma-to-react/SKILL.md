@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 2.1.0
+version: 2.2.0
 description: Convert Figma designs to pixel-perfect React components. Auto-extracts design tokens, downloads assets, and outputs production-ready code.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project.
@@ -23,9 +23,25 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 
 When the user invokes this skill, follow this workflow:
 
-## 0. Arm the Capture Hook (FIRST THING)
+## 0. Initialize Workflow (FIRST THING)
 
-**Do this immediately when the skill starts:**
+**Create a todo list to track progress** using TodoWrite:
+
+```
+1. Arm the capture hook
+2. Detect project structure
+3. Confirm configuration with user
+4. AI-powered naming for screens
+5. Process each screen with sub-agent
+6. Import tokens CSS (one-time setup)
+7. Visual validation with dev-browser
+8. Rename generic assets
+9. Disarm hook
+```
+
+Mark each todo as completed immediately after finishing each step. This prevents later steps from being forgotten as context fills up.
+
+**Then arm the capture hook:**
 
 ```bash
 touch /tmp/figma-skill-capture-active
@@ -33,11 +49,6 @@ mkdir -p /tmp/figma-captures
 ```
 
 This ensures ALL Figma MCP calls have their output captured and suppressed from context. The hook will show "✅ Captured..." instead of 50KB of React code.
-
-**Disarm when completely done** (after all screens processed):
-```bash
-rm /tmp/figma-skill-capture-active
-```
 
 ## 1. Detect Project Structure
 
@@ -165,9 +176,23 @@ Task(
 - Multiple screens can be processed in parallel
 - Parent only sees the summary, not the raw code
 
-**After all screens processed:** Continue to visual validation.
+**After all screens processed:** Continue to token import.
 
-## 5. Visual Validation with Dev Browser
+## 5. Import Tokens CSS (One-Time Setup)
+
+Before visual validation, import the generated tokens so CSS variables work:
+
+```css
+/* src/index.css (or your main CSS file) */
+@import "./styles/figma-tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+This must happen BEFORE visual validation so the rendered output shows correct colors/styles.
+
+## 6. Visual Validation with Dev Browser
 
 The Figma MCP sometimes generates incorrect CSS values (especially for images in clipped containers). Use dev-browser to validate.
 
@@ -202,16 +227,32 @@ The Figma MCP sometimes generates incorrect CSS values (especially for images in
 
 6. **Iterate** - Edit component, refresh browser, re-compare until pixel-perfect
 
-**After validation complete:** Disarm the hook (see step 0) and do one-time setup.
+**After validation complete:** Continue to asset renaming.
 
-**One-time setup:** Import tokens in main CSS:
-```css
-/* src/index.css */
-@import "./styles/figma-tokens.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+## 7. Rename Generic Assets (Optional)
+
+After processing, offer to rename generic assets with AI analysis:
+
 ```
+Found 12 assets with generic names. Analyze and rename?
+
+Current → Suggested:
+  asset.svg      → close-icon.svg (X shape, likely close button)
+  asset-1.svg    → back-arrow.svg (left-pointing arrow)
+  image.png      → face-capture-bg.png (blurred face photo)
+
+Apply renames? [Y/n/select]
+```
+
+Use the `rename-assets.sh` script or manually rename based on visual analysis.
+
+## 8. Disarm Hook and Finalize
+
+```bash
+rm /tmp/figma-skill-capture-active
+```
+
+Verify all components are working and tokens are imported correctly.
 
 ---
 
