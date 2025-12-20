@@ -22,6 +22,22 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 
 When the user invokes this skill, follow this workflow:
 
+## 0. Arm the Capture Hook (FIRST THING)
+
+**Do this immediately when the skill starts:**
+
+```bash
+touch /tmp/figma-skill-capture-active
+mkdir -p /tmp/figma-captures
+```
+
+This ensures ALL Figma MCP calls have their output captured and suppressed from context. The hook will show "✅ Captured..." instead of 50KB of React code.
+
+**Disarm when completely done** (after all screens processed):
+```bash
+rm /tmp/figma-skill-capture-active
+```
+
 ## 1. Detect Project Structure
 
 Scan the codebase to detect framework and conventions:
@@ -99,13 +115,7 @@ Use this name? [Y/n/custom]
 https://www.figma.com/design/{fileKey}/{fileName}?node-id={nodeId}
 ```
 
-**Arm the capture hook** (suppresses raw MCP output):
-```bash
-touch /tmp/figma-skill-capture-active
-mkdir -p /tmp/figma-captures
-```
-
-**Spawn a sub-agent for each screen** using the Task tool:
+**Spawn a sub-agent for each screen** using the Task tool (hook is already armed from step 0):
 
 ```
 Task(
@@ -154,11 +164,7 @@ Task(
 - Multiple screens can be processed in parallel
 - Parent only sees the summary, not the raw code
 
-**After all screens processed:**
-```bash
-# Disarm hook
-rm /tmp/figma-skill-capture-active
-```
+**After all screens processed:** Disarm the hook (see step 0) and do one-time setup.
 
 **One-time setup:** Import tokens in main CSS:
 ```css
