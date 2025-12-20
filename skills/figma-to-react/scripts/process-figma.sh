@@ -191,6 +191,10 @@ echo "Step 3: Generating component..." >&2
 # Start with the input file
 cp "$INPUT" "$TEMP_CODE"
 
+# Strip MCP instructions that appear after the React code
+# These markers indicate where Figma's guidance text begins
+perl -i -0777 -pe 's/(SUPER CRITICAL:|Node ids have been added|These styles are contained|Component descriptions:|IMPORTANT: After you call this tool).*//s' "$TEMP_CODE"
+
 # Remove asset const declarations (const imgXxx = "https://...")
 perl -i -pe 's/^const\s+\w+\s*=\s*"https?:\/\/(?:www\.figma\.com\/api\/mcp\/asset|localhost:\d+\/assets)\/[^"]+";?\s*\n?//gm' "$TEMP_CODE"
 

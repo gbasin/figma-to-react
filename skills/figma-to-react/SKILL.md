@@ -31,12 +31,11 @@ When the user invokes this skill, follow this workflow:
 1. Arm the capture hook
 2. Detect project structure
 3. Confirm configuration with user
-4. AI-powered naming for screens
-5. Process each screen with sub-agent
-6. Import tokens CSS (one-time setup)
-7. Visual validation with dev-browser
-8. Rename generic assets
-9. Disarm hook
+4. Process each screen with sub-agent
+5. Import tokens CSS (one-time setup)
+6. Visual validation with dev-browser
+7. Rename generic assets
+8. Disarm hook
 ```
 
 Mark each todo as completed immediately after finishing each step. This prevents later steps from being forgotten as context fills up.
@@ -86,41 +85,7 @@ Proceed? [Y/n/edit]
 
 Use `AskUserQuestion` if the user wants to customize paths.
 
-## 3. Naming
-
-Figma frame names are often generic ("Frame 1", "Mobile 3"). Use AI analysis to generate meaningful names.
-
-**For screens/components:**
-
-1. Get screenshot: `mcp__plugin_figma_figma__get_screenshot(nodeId: "...")`
-2. Analyze the screenshot visually
-3. Generate a descriptive component name based on:
-   - UI purpose (login, checkout, profile, etc.)
-   - Key elements visible (form, list, modal, etc.)
-   - Screen type (mobile, desktop, tablet)
-
-**For assets without descriptions:**
-
-1. After downloading assets, analyze each image
-2. Generate names based on visual content:
-   - Icons: `close-icon.svg`, `arrow-back.svg`, `menu-hamburger.svg`
-   - Images: `hero-background.png`, `user-avatar.png`
-   - Illustrations: `empty-state.svg`, `success-checkmark.svg`
-
-**Example AI naming flow:**
-
-```
-Analyzing screen "237:2571"...
-Screenshot shows: Motion capture UI with face outline, instruction text, camera frame
-
-Suggested name: MotionCaptureScreen
-  - Purpose: Identity verification face capture
-  - Key elements: camera frame, instruction overlay, navigation bar
-
-Use this name? [Y/n/custom]
-```
-
-## 4. Process Each Screen with Sub-Agent
+## 3. Process Each Screen with Sub-Agent
 
 **Parse Figma URL** to extract fileKey and nodeId:
 ```
@@ -178,7 +143,7 @@ Task(
 
 **After all screens processed:** Continue to token import.
 
-## 5. Import Tokens CSS (One-Time Setup)
+## 4. Import Tokens CSS (One-Time Setup)
 
 Before visual validation, import the generated tokens so CSS variables work:
 
@@ -192,7 +157,7 @@ Before visual validation, import the generated tokens so CSS variables work:
 
 This must happen BEFORE visual validation so the rendered output shows correct colors/styles.
 
-## 6. Visual Validation with Dev Browser
+## 5. Visual Validation with Dev Browser
 
 The Figma MCP sometimes generates incorrect CSS values (especially for images in clipped containers). Use dev-browser to validate.
 
@@ -208,28 +173,33 @@ The Figma MCP sometimes generates incorrect CSS values (especially for images in
    pnpm dev  # or npm run dev
    ```
 
-3. **Use dev-browser skill** to render and screenshot the component:
+3. **Set up component preview** (if needed):
+   - Temporarily render in App.tsx, or
+   - Create a `/preview` route, or
+   - Use existing Storybook
+
+4. **Use dev-browser skill** to render and screenshot:
    ```
    /dev-browser
-   Navigate to http://localhost:5173/component-preview
+   Navigate to http://localhost:5173 (or preview route)
    Take a screenshot of the rendered component
    ```
 
-4. **Compare visually** - Look for discrepancies:
+5. **Compare visually** - Look for discrepancies:
    - Image positioning/cropping differences
    - Text alignment issues
    - Spacing/sizing mismatches
 
-5. **Fix MCP bugs** - Common issues to check:
+6. **Fix MCP bugs** - Common issues to check:
    - `h-[200%]` or `w-[200%]` on images → usually wrong, adjust based on visual
    - `top-[-30%]` with `overflow-clip` parents → check against screenshot
    - Absolute positioning with extreme percentages (>150%)
 
-6. **Iterate** - Edit component, refresh browser, re-compare until pixel-perfect
+7. **Iterate** - Edit component, refresh browser, re-compare until pixel-perfect
 
 **After validation complete:** Continue to asset renaming.
 
-## 7. Rename Generic Assets (Optional)
+## 6. Rename Generic Assets (Optional)
 
 After processing, offer to rename generic assets with AI analysis:
 
@@ -246,7 +216,7 @@ Apply renames? [Y/n/select]
 
 Use the `rename-assets.sh` script or manually rename based on visual analysis.
 
-## 8. Disarm Hook and Finalize
+## 7. Disarm Hook and Finalize
 
 ```bash
 rm /tmp/figma-skill-capture-active
