@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 2.0.1
+version: 2.1.0
 description: Convert Figma designs to pixel-perfect React components. Auto-extracts design tokens, downloads assets, and outputs production-ready code.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project.
