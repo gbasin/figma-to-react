@@ -20,11 +20,9 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 
 ---
 
-## AI-Assisted Workflow
-
 When the user invokes this skill, follow this workflow:
 
-### 1. Detect Project Structure
+## 1. Detect Project Structure
 
 Scan the codebase to detect framework and conventions:
 
@@ -42,7 +40,7 @@ ls -d src/styles/ styles/ src/css/ 2>/dev/null
 ls -d public/ static/ public/assets/ 2>/dev/null
 ```
 
-### 2. Confirm Configuration with User
+## 2. Confirm Configuration with User
 
 Before processing, confirm paths with the user:
 
@@ -60,7 +58,7 @@ Proceed? [Y/n/edit]
 
 Use `AskUserQuestion` if the user wants to customize paths.
 
-### 3. AI-Powered Naming
+## 3. Naming
 
 Figma frame names are often generic ("Frame 1", "Mobile 3"). Use AI analysis to generate meaningful names.
 
@@ -94,7 +92,7 @@ Suggested name: MotionCaptureScreen
 Use this name? [Y/n/custom]
 ```
 
-### 4. Process Each Screen with Sub-Agent
+## 4. Process Each Screen with Sub-Agent
 
 **Parse Figma URL** to extract fileKey and nodeId:
 ```
@@ -169,21 +167,6 @@ rm /tmp/figma-skill-capture-active
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-```
-
-### 5. AI Asset Renaming (Optional)
-
-After processing, offer to rename generic assets:
-
-```
-Found 12 assets with generic names. Analyze and rename?
-
-Current → Suggested:
-  asset.svg      → close-icon.svg (X shape, likely close button)
-  asset-1.svg    → back-arrow.svg (left-pointing arrow)
-  image.png      → face-capture-bg.png (blurred face photo)
-
-Apply renames? [Y/n/select]
 ```
 
 ---
