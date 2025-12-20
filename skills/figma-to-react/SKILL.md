@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 2.0.0
+version: 2.0.1
 description: Convert Figma designs to pixel-perfect React components. Auto-extracts design tokens, downloads assets, and outputs production-ready code.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project.
@@ -14,8 +14,9 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 ## How It Works
 
 1. **Figma MCP** outputs React/TSX with Tailwind classes + temporary asset URLs
-2. **This skill** extracts design tokens, downloads assets, and outputs ready-to-use components
-3. **CSS variables** make the MCP output work directly (no manual code editing)
+2. **PostToolUse hook** captures the response and suppresses raw output from context
+3. **Processing script** extracts design tokens, downloads assets, outputs ready-to-use components
+4. **Sub-agents** process each screen in isolation to keep parent context clean
 
 ---
 
@@ -93,61 +94,72 @@ Suggested name: MotionCaptureScreen
 Use this name? [Y/n/custom]
 ```
 
-### 4. Process with Confirmed Settings
+### 4. Process Each Screen with Sub-Agent
 
 **Parse Figma URL** to extract fileKey and nodeId:
 ```
 https://www.figma.com/design/{fileKey}/{fileName}?node-id={nodeId}
 ```
 
-**Run the pipeline:**
-
+**Arm the capture hook** (suppresses raw MCP output):
 ```bash
-# Arm capture hook
 touch /tmp/figma-skill-capture-active
 mkdir -p /tmp/figma-captures
 ```
 
-Call MCP (use `figma-desktop` variant if rate limited):
+**Spawn a sub-agent for each screen** using the Task tool:
+
 ```
-mcp__plugin_figma_figma__get_design_context(
-  fileKey: "abc123",
-  nodeId: "237:2571",
-  clientFrameworks: "react",
-  clientLanguages: "typescript"
+Task(
+  subagent_type: "general-purpose",
+  prompt: """
+    Process Figma screen for the figma-to-react skill.
+
+    INPUTS:
+    - fileKey: "abc123"
+    - nodeId: "237:2571"
+    - componentName: "MotionCaptureScreen"
+    - componentPath: "src/components/MotionCaptureScreen.tsx"
+    - assetDir: "public/figma-assets"
+    - urlPrefix: "/figma-assets"
+    - tokensFile: "src/styles/figma-tokens.css"
+    - SKILL_DIR: "/path/to/skills/figma-to-react"
+
+    STEPS:
+    1. Call mcp__plugin_figma_figma__get_design_context(
+         fileKey: "abc123",
+         nodeId: "237:2571",
+         clientFrameworks: "react",
+         clientLanguages: "typescript"
+       )
+
+       The hook will:
+       - Capture response to /tmp/figma-captures/figma-237-2571.txt
+       - Suppress raw output (you'll see "✅ Captured..." message)
+
+    2. Run the processing script:
+       $SKILL_DIR/scripts/process-figma.sh \\
+         /tmp/figma-captures/figma-237-2571.txt \\
+         src/components/MotionCaptureScreen.tsx \\
+         public/figma-assets \\
+         /figma-assets \\
+         src/styles/figma-tokens.css
+
+    3. Return a summary: component path, asset count, any errors.
+  """
 )
 ```
 
-The hook auto-saves response to `/tmp/figma-captures/figma-{nodeId}.txt`
+**Why sub-agents?**
+- Each Figma MCP response is ~50KB of React code
+- Sub-agents keep this isolated from parent context
+- Multiple screens can be processed in parallel
+- Parent only sees the summary, not the raw code
 
-**Process captured response:**
-
-Scripts are in `./scripts/` relative to this SKILL.md. Use the absolute path based on where you loaded this file.
-
+**After all screens processed:**
 ```bash
-# Example (replace SKILL_DIR with actual path to this skill's directory):
-$SKILL_DIR/scripts/process-figma.sh \
-  /tmp/figma-captures/figma-237-2571.txt \
-  src/components/MotionCaptureScreen.tsx \
-  public/figma-assets \
-  /figma-assets \
-  src/styles/figma-tokens.css
-
 # Disarm hook
 rm /tmp/figma-skill-capture-active
-```
-
-**For multiple screens:** Loop over node IDs. Tokens merge automatically, assets deduplicate by content hash.
-
-```bash
-for node in "237-2571" "237-2572" "237-2573"; do
-  $SKILL_DIR/scripts/process-figma.sh \
-    /tmp/figma-captures/figma-${node}.txt \
-    src/components/${COMPONENT_NAME}.tsx \
-    public/figma-assets \
-    /figma-assets \
-    src/styles/figma-tokens.css
-done
 ```
 
 **One-time setup:** Import tokens in main CSS:
@@ -178,27 +190,20 @@ Apply renames? [Y/n/select]
 
 ## Prerequisites
 
-### Hook Setup (Auto-captures MCP responses)
+### Hook (Auto-configured)
 
-**If installed as a plugin:** Hooks are auto-configured. Restart Claude Code after installing.
+When installed as a plugin, the PostToolUse hook is automatically configured. The hook:
 
-**If using skill directly:** Add to `.claude/settings.json`:
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "mcp__plugin_figma_figma__get_design_context",
-        "hooks": [{ "type": "command", "command": "~/.claude/skills/figma-to-react/hooks/capture-figma-response.sh" }]
-      },
-      {
-        "matcher": "mcp__plugin_figma_figma-desktop__get_design_context",
-        "hooks": [{ "type": "command", "command": "~/.claude/skills/figma-to-react/hooks/capture-figma-response.sh" }]
-      }
-    ]
-  }
-}
-```
+1. **Always captures** Figma MCP responses to `/tmp/figma-captures/`
+2. **Conditionally suppresses** output when skill is active (marker file exists)
+
+When the marker file `/tmp/figma-skill-capture-active` exists:
+- Raw MCP output is hidden from Claude's context
+- Claude sees: "✅ Captured to /tmp/... NEXT: run process-figma.sh"
+
+When marker file does NOT exist (using Figma MCP directly):
+- Normal MCP output is shown
+- Capture still happens (useful for debugging)
 
 ## Script Reference
 
@@ -292,18 +297,23 @@ Now the MCP output works directly - no code modification needed.
 
 **Fix:** Use `mcp__plugin_figma_figma-desktop__get_design_context` instead (requires Figma desktop app open with the file). No rate limits.
 
-### Hook not capturing
+### Hook not suppressing output
 
-**Cause:** Marker file missing or hook not configured.
+**Cause:** Marker file missing (skill not armed).
 
 **Fix:**
 ```bash
-# Ensure marker exists
+# Arm the skill before calling Figma MCP
 touch /tmp/figma-skill-capture-active
-
-# Check hook is configured
-cat ~/.claude/settings.json | grep figma
 ```
+
+### Hook not capturing at all
+
+**Cause:** Plugin hooks not loaded (restart needed).
+
+**Fix:**
+1. Restart Claude Code to reload plugin hooks
+2. Check `/tmp/figma-captures/` for captured files
 
 ---
 

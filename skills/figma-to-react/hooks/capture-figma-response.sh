@@ -2,23 +2,18 @@
 #
 # PostToolUse hook for capturing Figma MCP get_design_context responses
 #
-# Only activates when /tmp/figma-skill-capture-active marker exists.
-# Saves responses to /tmp/figma-captures/figma-{nodeId}.txt
+# ALWAYS captures responses to /tmp/figma-captures/figma-{nodeId}.txt
+# ONLY suppresses output when skill is active (marker file exists)
 #
-# This ensures verbatim code capture without LLM transcription modifications.
+# This ensures:
+# - Verbatim code capture without LLM transcription modifications
+# - Normal Figma MCP experience when skill is not active
+# - Debug captures available even without skill
 
 MARKER="/tmp/figma-skill-capture-active"
 OUTPUT_DIR="/tmp/figma-captures"
 
-# Check if skill has armed the capture
-if [ ! -f "$MARKER" ]; then
-  # Skill not active - pass through silently
-  cat > /dev/null
-  echo '{"decision": "allow"}'
-  exit 0
-fi
-
-# Read the full hook input
+# Always read the full hook input
 INPUT=$(cat)
 
 # Extract nodeId for filename (convert : to - for filesystem safety)
@@ -71,15 +66,30 @@ fi
 
 if [ -z "$CODE" ]; then
   echo "Warning: Could not extract code from response" >&2
-  echo '{"decision": "allow"}'
+  # No code to capture, allow normal flow
+  echo '{}'
   exit 0
 fi
 
-# Save extracted code (jq already handles JSON string unescaping)
+# ALWAYS save extracted code (useful for debugging even without skill)
 printf '%s' "$CODE" > "$OUTPUT_FILE"
-
-# Log capture
 BYTES=$(wc -c < "$OUTPUT_FILE" | tr -d ' ')
-echo "✓ Captured: figma-${NODE_ID}.txt (${BYTES} bytes)" >&2
 
-echo '{"decision": "allow"}'
+# CONDITIONAL: Only suppress output when skill is active
+if [ -f "$MARKER" ]; then
+  # Skill is active - suppress raw output, replace with instruction
+  echo "✓ Captured: figma-${NODE_ID}.txt (${BYTES} bytes) [suppressing output]" >&2
+  cat << EOF
+{
+  "suppressOutput": true,
+  "hookSpecificOutput": {
+    "hookEventName": "PostToolUse",
+    "additionalContext": "✅ Figma response captured to ${OUTPUT_FILE} (${BYTES} bytes)\n\nNEXT: Run the processing script to extract tokens and download assets:\n\n\$SKILL_DIR/scripts/process-figma.sh ${OUTPUT_FILE} <component.tsx> <asset-dir> <url-prefix> <tokens.css>"
+  }
+}
+EOF
+else
+  # Skill not active - allow normal output (capture still happened for debugging)
+  echo "✓ Captured: figma-${NODE_ID}.txt (${BYTES} bytes) [passthrough]" >&2
+  echo '{}'
+fi
