@@ -17,6 +17,7 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 2. **PostToolUse hook** captures the response and suppresses raw output from context
 3. **Processing script** extracts design tokens, downloads assets, outputs ready-to-use components
 4. **Sub-agents** process each screen in isolation to keep parent context clean
+5. **Visual validation** uses dev-browser to compare rendered output vs Figma screenshot, fixing MCP bugs
 
 ---
 
@@ -164,7 +165,44 @@ Task(
 - Multiple screens can be processed in parallel
 - Parent only sees the summary, not the raw code
 
-**After all screens processed:** Disarm the hook (see step 0) and do one-time setup.
+**After all screens processed:** Continue to visual validation.
+
+## 5. Visual Validation with Dev Browser
+
+The Figma MCP sometimes generates incorrect CSS values (especially for images in clipped containers). Use dev-browser to validate.
+
+**For each generated component:**
+
+1. **Get Figma screenshot** (if not already captured):
+   ```
+   mcp__plugin_figma_figma__get_screenshot(nodeId: "237:2571")
+   ```
+
+2. **Start dev server** (if not running):
+   ```bash
+   pnpm dev  # or npm run dev
+   ```
+
+3. **Use dev-browser skill** to render and screenshot the component:
+   ```
+   /dev-browser
+   Navigate to http://localhost:5173/component-preview
+   Take a screenshot of the rendered component
+   ```
+
+4. **Compare visually** - Look for discrepancies:
+   - Image positioning/cropping differences
+   - Text alignment issues
+   - Spacing/sizing mismatches
+
+5. **Fix MCP bugs** - Common issues to check:
+   - `h-[200%]` or `w-[200%]` on images → usually wrong, adjust based on visual
+   - `top-[-30%]` with `overflow-clip` parents → check against screenshot
+   - Absolute positioning with extreme percentages (>150%)
+
+6. **Iterate** - Edit component, refresh browser, re-compare until pixel-perfect
+
+**After validation complete:** Disarm the hook (see step 0) and do one-time setup.
 
 **One-time setup:** Import tokens in main CSS:
 ```css
