@@ -45,7 +45,7 @@ echo "Diff: ${DIFF}%"
   - `rendered.png` - Captured render for that pass
   - `diff.png` - Heatmap (brighter = more different)
 
-**Dimension check**: The script logs whether dimensions match. If you see `"Dimensions match: 390x844 (good)"`, the element screenshot captured the component at its Figma frame size. A `"WARNING: Dimension mismatch"` indicates the component isn't rendering at the expected size.
+**Dimension check**: The script logs whether dimensions match. With the fixed-dimension wrapper from step 6 (using dimensions from `/tmp/figma-to-react/component-metadata.json`), dimensions should match automatically. If you see a `"WARNING: Dimension mismatch"`, check that the preview route has the correct dimensions set.
 
 ## Validation Loop
 

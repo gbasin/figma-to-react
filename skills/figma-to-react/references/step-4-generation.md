@@ -23,7 +23,20 @@ Task(
     - SKILL_DIR: "{skillDir}"
 
     STEPS:
-    1. Call the Figma MCP get_design_context tool.
+    1. Call the Figma MCP get_metadata tool to get frame dimensions.
+
+       Use whichever server is available:
+       - mcp__plugin_figma_figma__get_metadata (web - requires auth, uses fileKey)
+       - mcp__plugin_figma_figma-desktop__get_metadata (desktop - uses active tab)
+
+       Parameters:
+         fileKey: "{fileKey}" (web only)
+         nodeId: "{nodeId}"
+
+       A hook automatically extracts dimensions and saves them to
+       /tmp/figma-to-react/component-metadata.json (keyed by nodeId).
+
+    2. Call the Figma MCP get_design_context tool.
 
        Use whichever server is available:
        - mcp__plugin_figma_figma__get_design_context (web - requires auth, uses fileKey)
@@ -37,7 +50,7 @@ Task(
 
        The hook will capture response to /tmp/figma-to-react/captures/figma-{nodeId}.txt
 
-    2. Run the processing script:
+    3. Run the processing script:
        $SKILL_DIR/scripts/process-figma.sh \\
          /tmp/figma-to-react/captures/figma-{nodeId}.txt \\
          {componentPath} \\
@@ -45,7 +58,13 @@ Task(
          {urlPrefix} \\
          {tokensFile}
 
-    3. Lint and auto-fix Tailwind issues:
+    4. Link component name to metadata:
+       $SKILL_DIR/scripts/save-component-metadata.sh \\
+         "{ComponentName}" "{nodeId}" "{componentPath}"
+
+       This adds the component name to the dimensions already saved by the hook.
+
+    5. Lint and auto-fix Tailwind issues:
        npx eslint --fix {componentPath}
 
        This auto-fixes ~90% of MCP output issues:
@@ -54,7 +73,7 @@ Task(
        - Redundant classes (filter in TW v3)
        - Shorthand opportunities (top-X bottom-X → inset-y-X)
 
-    4. Check for remaining issues:
+    6. Check for remaining issues:
        npx eslint {componentPath}
 
        Review any warnings that couldn't be auto-fixed:
@@ -63,7 +82,8 @@ Task(
 
        Fix these manually based on the component's intent.
 
-    5. Return summary: component path, asset count, eslint fixes applied, any errors.
+    7. Return summary: component path, asset count, eslint fixes applied, any errors.
+       (Dimensions are already in the metadata file.)
   """
 )
 ```
@@ -81,6 +101,8 @@ Track for each screen:
 - Component file path
 - Figma nodeId (needed for validation)
 - Success/failure status
+
+Dimensions are stored in `/tmp/figma-to-react/component-metadata.json` (keyed by component name) for step 6.
 
 ## Next Step
 

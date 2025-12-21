@@ -22,7 +22,7 @@ When invoked, create a TodoWrite list with these steps. Use Glob to find each st
 4. Generate screens (parallel) - Glob **/step-4-generation.md then Read it
 5. Import tokens - Glob **/step-5-import-tokens.md then Read it
 6. Create preview route - Glob **/step-6-preview-route.md then Read it
-7. Validate screens (sequential) - Glob **/step-7-validation.md then Read it
+7. Validate screens (parallel) - Glob **/step-7-validation.md then Read it
 8. Rename assets - Glob **/step-8-rename-assets.md then Read it
 9. Disarm hook - Glob **/step-9-disarm-hook.md then Read it
 ```

@@ -8,9 +8,10 @@ The validation step needs to screenshot each component in isolation. A preview r
 
 ## Instructions
 
-1. **Get component list from step 4**
+1. **Get component list and dimensions from step 4**
 
-   You generated components in step 4. Collect their names and paths.
+   You generated components in step 4. Collect their names, paths, and dimensions
+   from `/tmp/figma-to-react/component-metadata.json`.
 
 2. **Detect framework** (from step 2 config)
 
@@ -34,6 +35,13 @@ The validation step needs to screenshot each component in isolation. A preview r
      // ... one entry per component
    };
 
+   // Dimensions from Figma (from component-metadata.json)
+   const dimensions: Record<string, { width: number; height: number }> = {
+     ComponentA: { width: 390, height: 844 },
+     ComponentB: { width: 1440, height: 900 },
+     // ... one entry per component with actual dimensions
+   };
+
    export function FigmaPreview() {
      const [params] = useSearchParams();
      const screenName = params.get('screen');
@@ -45,7 +53,9 @@ The validation step needs to screenshot each component in isolation. A preview r
            <ul>
              {Object.keys(screens).map(name => (
                <li key={name}>
-                 <a href={`?screen=${name}`}>{name}</a>
+                 <a href={`?screen=${name}`}>
+                   {name} ({dimensions[name]?.width}x{dimensions[name]?.height})
+                 </a>
                </li>
              ))}
            </ul>
@@ -54,8 +64,12 @@ The validation step needs to screenshot each component in isolation. A preview r
      }
 
      const Screen = screens[screenName];
+     const dim = dimensions[screenName];
      return (
-       <div data-figma-component={screenName}>
+       <div
+         data-figma-component={screenName}
+         style={{ width: dim?.width, height: dim?.height, overflow: 'hidden' }}
+       >
          <Screen />
        </div>
      );
@@ -77,6 +91,12 @@ The validation step needs to screenshot each component in isolation. A preview r
      ComponentB,
    };
 
+   // Dimensions from Figma (from component-metadata.json)
+   const dimensions: Record<string, { width: number; height: number }> = {
+     ComponentA: { width: 390, height: 844 },
+     ComponentB: { width: 1440, height: 900 },
+   };
+
    export default function FigmaPreview() {
      const params = useSearchParams();
      const screenName = params.get('screen');
@@ -88,7 +108,9 @@ The validation step needs to screenshot each component in isolation. A preview r
            <ul>
              {Object.keys(screens).map(name => (
                <li key={name}>
-                 <a href={`?screen=${name}`}>{name}</a>
+                 <a href={`?screen=${name}`}>
+                   {name} ({dimensions[name]?.width}x{dimensions[name]?.height})
+                 </a>
                </li>
              ))}
            </ul>
@@ -97,8 +119,12 @@ The validation step needs to screenshot each component in isolation. A preview r
      }
 
      const Screen = screens[screenName];
+     const dim = dimensions[screenName];
      return (
-       <div data-figma-component={screenName}>
+       <div
+         data-figma-component={screenName}
+         style={{ width: dim?.width, height: dim?.height, overflow: 'hidden' }}
+       >
          <Screen />
        </div>
      );
