@@ -12,10 +12,10 @@ Compare rendered components to Figma screenshots. Loop until visual diff ≤ 5%.
 
 ### capture-screenshot.ts
 
-Captures rendered component using headless Playwright.
+Captures the component element at its natural size using Playwright. The preview route wraps components in `<div data-figma-component>`, and this script screenshots that element directly—no viewport math needed.
 
 ```bash
-npx tsx scripts/capture-screenshot.ts <url> <output.png> [width] [height]
+npx tsx scripts/capture-screenshot.ts <url> <output.png>
 
 # Example:
 npx tsx scripts/capture-screenshot.ts \
@@ -28,20 +28,24 @@ npx tsx scripts/capture-screenshot.ts \
 Compares two images using ImageMagick RMSE. Outputs diff percentage to stdout.
 
 ```bash
-./scripts/validate-visual.sh <figma.png> <rendered.png>
+./scripts/validate-visual.sh <figma.png> <rendered.png> [component] [pass]
 
 # Example:
 DIFF=$(./scripts/validate-visual.sh \
   /tmp/figma-to-react/figma-123.png \
-  /tmp/figma-to-react/rendered-Login.png)
+  /tmp/figma-to-react/rendered-Login.png \
+  LoginScreen 1)
 echo "Diff: ${DIFF}%"
 # Output: Diff: 3.45%
 ```
 
-**Output files** in `/tmp/figma-to-react/validation/{timestamp}/`:
-- `figma.png` - Reference image
-- `rendered.png` - Captured render
-- `diff.png` - Heatmap (brighter = more different)
+**Output files** in `/tmp/figma-to-react/validation/{component}/`:
+- `figma.png` - Reference image (copied once)
+- `pass-1/`, `pass-2/`, etc:
+  - `rendered.png` - Captured render for that pass
+  - `diff.png` - Heatmap (brighter = more different)
+
+**Dimension check**: The script logs whether dimensions match. If you see `"Dimensions match: 390x844 (good)"`, the element screenshot captured the component at its Figma frame size. A `"WARNING: Dimension mismatch"` indicates the component isn't rendering at the expected size.
 
 ## Validation Loop
 
@@ -65,9 +69,9 @@ Task(
     - capture: skills/figma-to-react/scripts/capture-screenshot.ts
     - validate: skills/figma-to-react/scripts/validate-visual.sh
 
-    LOOP:
+    LOOP (track pass number starting at 1):
 
-    1. GET FIGMA SCREENSHOT
+    1. GET FIGMA SCREENSHOT (only on first pass)
        Use whichever Figma MCP server is available:
        - mcp__plugin_figma_figma__get_screenshot (web - requires auth, uses fileKey)
        - mcp__plugin_figma_figma-desktop__get_screenshot (desktop - uses active tab)
@@ -79,8 +83,8 @@ Task(
        npx tsx {capture} "{previewUrl}" /tmp/figma-to-react/rendered-{ComponentName}.png
 
     3. VALIDATE
-       DIFF=$({validate} /tmp/figma-to-react/figma-{nodeId}.png /tmp/figma-to-react/rendered-{ComponentName}.png)
-       echo "Current diff: ${DIFF}%"
+       DIFF=$({validate} /tmp/figma-to-react/figma-{nodeId}.png /tmp/figma-to-react/rendered-{ComponentName}.png {ComponentName} $PASS)
+       echo "Pass $PASS diff: ${DIFF}%"
 
     4. CHECK RESULT
        If DIFF ≤ 5: Done, return success
@@ -98,18 +102,18 @@ Task(
     6. FIX COMPONENT
        Edit {componentPath} to fix the brightest diff area.
 
-    7. LOOP to step 2
+    7. INCREMENT PASS and loop to step 2
 
-    MAX: 10 iterations. Report final diff % if still above 5%.
+    MAX: 10 passes. Report final diff % if still above 5%.
 
     RETURN: status, final diff %, list of fixes
   """
 )
 ```
 
-## Run Sequentially
+## Run in Parallel
 
-Each validation needs the dev server. Run one screen at a time to avoid port conflicts.
+Spawn all validation sub-agents simultaneously. Each uses its own preview URL (`?screen=ComponentName`) on the shared dev server—no conflicts.
 
 ## Interpreting Diff Heatmap
 
