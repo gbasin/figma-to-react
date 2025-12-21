@@ -1,4 +1,4 @@
-# Step 8: Disarm Hook and Finalize
+# Step 9: Disarm Hook and Finalize
 
 Clean up and verify the workflow completed successfully.
 

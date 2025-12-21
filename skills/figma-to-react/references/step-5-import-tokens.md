@@ -38,4 +38,4 @@ The CSS variables need to be defined for Tailwind to parse these correctly. The 
 
 ## Next Step
 
-Mark this step complete. Read step-6-validation.md.
+Read step-6-preview-route.md.
