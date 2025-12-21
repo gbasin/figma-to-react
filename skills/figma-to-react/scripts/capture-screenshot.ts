@@ -50,9 +50,13 @@ async function capture() {
     // Small delay for any animations to settle
     await page.waitForTimeout(500);
 
-    await page.screenshot({ path: output, fullPage: true });
+    // Find the component element and screenshot it at its natural size
+    const element = await page.locator('[data-figma-component]');
+    await element.waitFor({ state: 'visible', timeout: 10000 });
+    const box = await element.boundingBox();
+    await element.screenshot({ path: output });
     console.log(`Screenshot saved: ${output}`);
-    console.log(`Viewport: ${width}x${height} @2x`);
+    console.log(`Component size: ${box?.width}x${box?.height} @2x`);
   } catch (error) {
     console.error(`Error capturing screenshot: ${error}`);
     process.exit(1);

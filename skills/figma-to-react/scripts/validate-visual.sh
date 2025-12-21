@@ -77,15 +77,19 @@ echo "Rendered size: $RENDERED_SIZE" >&2
 # Copy rendered to output dir
 cp "$RENDERED_IMG" "$RENDERED_COPY"
 
-# If sizes differ, resize Figma to match rendered (rendered is ground truth for layout)
-if [ "$FIGMA_SIZE" != "$RENDERED_SIZE" ]; then
-  echo "Resizing Figma screenshot to match rendered..." >&2
+# Check if sizes match (they should with element-level screenshots)
+if [ "$FIGMA_SIZE" = "$RENDERED_SIZE" ]; then
+  echo "Dimensions match: $FIGMA_SIZE (good)" >&2
+  COMPARE_IMG="$FIGMA_IMG"
+  cp "$FIGMA_IMG" "$FIGMA_COPY"
+else
+  echo "WARNING: Dimension mismatch! This may indicate a rendering issue." >&2
+  echo "  Expected: $FIGMA_SIZE (Figma)" >&2
+  echo "  Got:      $RENDERED_SIZE (rendered)" >&2
+  echo "  Resizing Figma to match for comparison..." >&2
   magick "$FIGMA_IMG" -resize "${RENDERED_SIZE}!" "$RESIZED_FIGMA"
   COMPARE_IMG="$RESIZED_FIGMA"
   cp "$RESIZED_FIGMA" "$FIGMA_COPY"
-else
-  COMPARE_IMG="$FIGMA_IMG"
-  cp "$FIGMA_IMG" "$FIGMA_COPY"
 fi
 
 # Compare images

@@ -54,7 +54,11 @@ The validation step needs to screenshot each component in isolation. A preview r
      }
 
      const Screen = screens[screenName];
-     return <Screen />;
+     return (
+       <div data-figma-component={screenName}>
+         <Screen />
+       </div>
+     );
    }
    ```
 
@@ -93,7 +97,11 @@ The validation step needs to screenshot each component in isolation. A preview r
      }
 
      const Screen = screens[screenName];
-     return <Screen />;
+     return (
+       <div data-figma-component={screenName}>
+         <Screen />
+       </div>
+     );
    }
    ```
 

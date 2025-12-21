@@ -4,10 +4,9 @@ Compare rendered components to Figma screenshots. Loop until visual diff ≤ 5%.
 
 ## Prerequisites
 
-- ImageMagick: `brew install imagemagick`
-- Playwright: `pnpm add -D playwright && npx playwright install chromium`
 - Dev server running: `pnpm dev`
 - Preview route created (step 6)
+- Tools installed (step 1): ImageMagick, Playwright
 
 ## Scripts
 
