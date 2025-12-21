@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Claude Code plugin for converting Figma flows to TypeScript React components",
-    "version": "0.9.0"
+    "version": "0.9.1"
   },
   "plugins": [
     {
       "name": "figma-to-react",
       "source": "./",
       "description": "Convert Figma screen flows into pixel-perfect TypeScript React components with Tailwind CSS",
-      "version": "0.9.0",
+      "version": "0.9.1",
       "author": {
         "name": "Gary Basin"
       },
