@@ -69,7 +69,11 @@ Task(
     LOOP:
 
     1. GET FIGMA SCREENSHOT
-       mcp__plugin_figma_figma__get_screenshot(nodeId: "{nodeId}")
+       Use whichever Figma MCP server is available:
+       - mcp__plugin_figma_figma__get_screenshot (web - requires auth, uses fileKey)
+       - mcp__plugin_figma_figma-desktop__get_screenshot (desktop - uses active tab)
+
+       Parameters: nodeId: "{nodeId}", fileKey: "{fileKey}" (web only)
        Save to: /tmp/figma-to-react/figma-{nodeId}.png
 
     2. CAPTURE RENDERED

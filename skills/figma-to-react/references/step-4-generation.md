@@ -23,12 +23,17 @@ Task(
     - SKILL_DIR: "{skillDir}"
 
     STEPS:
-    1. Call mcp__plugin_figma_figma__get_design_context(
-         fileKey: "{fileKey}",
-         nodeId: "{nodeId}",
-         clientFrameworks: "react",
+    1. Call the Figma MCP get_design_context tool.
+
+       Use whichever server is available:
+       - mcp__plugin_figma_figma__get_design_context (web - requires auth, uses fileKey)
+       - mcp__plugin_figma_figma-desktop__get_design_context (desktop - uses active tab)
+
+       Parameters:
+         fileKey: "{fileKey}" (web only)
+         nodeId: "{nodeId}"
+         clientFrameworks: "react"
          clientLanguages: "typescript"
-       )
 
        The hook will capture response to /tmp/figma-to-react/captures/figma-{nodeId}.txt
 

@@ -1,105 +1,115 @@
 # Step 6: Create Preview Route
 
-Create a dedicated route to render generated components for validation.
+Generate a preview route to render components for validation screenshots.
 
 ## Why
 
-The validation step needs to screenshot each component in isolation. A preview route lets us load any component via query param: `/figma-preview?screen=ComponentName`
+The validation step needs to screenshot each component in isolation. A preview route loads any component via query param: `/figma-preview?screen=ComponentName`
 
-## For Vite/React Router
+## Instructions
 
-Create `src/pages/FigmaPreview.tsx`:
+1. **Get component list from step 4**
 
-```tsx
-import { useSearchParams } from 'react-router-dom';
+   You generated components in step 4. Collect their names and paths.
 
-// Import all generated components
-import { ScreenOne } from '../components/ScreenOne';
-import { ScreenTwo } from '../components/ScreenTwo';
+2. **Detect framework** (from step 2 config)
 
-const screens: Record<string, React.ComponentType> = {
-  ScreenOne,
-  ScreenTwo,
-};
+   - Vite/React Router → create `src/pages/FigmaPreview.tsx`
+   - Next.js App Router → create `app/figma-preview/page.tsx`
 
-export function FigmaPreview() {
-  const [params] = useSearchParams();
-  const screenName = params.get('screen');
+3. **Generate the preview file**
 
-  if (!screenName || !screens[screenName]) {
-    return (
-      <div>
-        <h1>Figma Preview</h1>
-        <ul>
-          {Object.keys(screens).map(name => (
-            <li key={name}>
-              <a href={`?screen=${name}`}>{name}</a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
+   **For Vite/React Router:**
+   ```tsx
+   import { useSearchParams } from 'react-router-dom';
 
-  const Screen = screens[screenName];
-  return <Screen />;
-}
-```
+   // Import each generated component
+   import { ComponentA } from '../components/ComponentA';
+   import { ComponentB } from '../components/ComponentB';
+   // ... one import per component from step 4
 
-Add route in your router config:
+   const screens: Record<string, React.ComponentType> = {
+     ComponentA,
+     ComponentB,
+     // ... one entry per component
+   };
 
-```tsx
-<Route path="/figma-preview" element={<FigmaPreview />} />
-```
+   export function FigmaPreview() {
+     const [params] = useSearchParams();
+     const screenName = params.get('screen');
 
-## For Next.js App Router
+     if (!screenName || !screens[screenName]) {
+       return (
+         <div>
+           <h1>Figma Preview</h1>
+           <ul>
+             {Object.keys(screens).map(name => (
+               <li key={name}>
+                 <a href={`?screen=${name}`}>{name}</a>
+               </li>
+             ))}
+           </ul>
+         </div>
+       );
+     }
 
-Create `app/figma-preview/page.tsx`:
+     const Screen = screens[screenName];
+     return <Screen />;
+   }
+   ```
 
-```tsx
-'use client';
+   **For Next.js App Router:**
+   ```tsx
+   'use client';
 
-import { useSearchParams } from 'next/navigation';
+   import { useSearchParams } from 'next/navigation';
 
-// Import all generated components
-import { ScreenOne } from '@/components/ScreenOne';
-import { ScreenTwo } from '@/components/ScreenTwo';
+   // Import each generated component
+   import { ComponentA } from '@/components/ComponentA';
+   import { ComponentB } from '@/components/ComponentB';
 
-const screens: Record<string, React.ComponentType> = {
-  ScreenOne,
-  ScreenTwo,
-};
+   const screens: Record<string, React.ComponentType> = {
+     ComponentA,
+     ComponentB,
+   };
 
-export default function FigmaPreview() {
-  const params = useSearchParams();
-  const screenName = params.get('screen');
+   export default function FigmaPreview() {
+     const params = useSearchParams();
+     const screenName = params.get('screen');
 
-  if (!screenName || !screens[screenName]) {
-    return (
-      <div>
-        <h1>Figma Preview</h1>
-        <ul>
-          {Object.keys(screens).map(name => (
-            <li key={name}>
-              <a href={`?screen=${name}`}>{name}</a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
+     if (!screenName || !screens[screenName]) {
+       return (
+         <div>
+           <h1>Figma Preview</h1>
+           <ul>
+             {Object.keys(screens).map(name => (
+               <li key={name}>
+                 <a href={`?screen=${name}`}>{name}</a>
+               </li>
+             ))}
+           </ul>
+         </div>
+       );
+     }
 
-  const Screen = screens[screenName];
-  return <Screen />;
-}
-```
+     const Screen = screens[screenName];
+     return <Screen />;
+   }
+   ```
 
-## Verify
+4. **Add route** (Vite/React Router only)
 
-1. Start dev server: `pnpm dev`
-2. Navigate to `/figma-preview`
-3. Should see list of component links
-4. Click one - should render that component
+   Find the router config and add:
+   ```tsx
+   <Route path="/figma-preview" element={<FigmaPreview />} />
+   ```
+
+5. **Verify**
+
+   - Start dev server: `pnpm dev`
+   - Navigate to `/figma-preview`
+   - Should see list of component links
+   - Click one → should render that component
 
 ## Next Step
 
