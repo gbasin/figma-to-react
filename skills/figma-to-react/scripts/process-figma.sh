@@ -13,7 +13,7 @@
 #
 # Example:
 #   ./process-figma.sh \
-#     /tmp/figma-captures/figma-237-2571.txt \
+#     /tmp/figma-to-react/captures/figma-237-2571.txt \
 #     src/components/MyScreen.tsx \
 #     public/figma-assets \
 #     /figma-assets \

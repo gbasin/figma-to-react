@@ -31,7 +31,7 @@ Apply renames? [Y/n/select]
 Use the rename-assets.sh script:
 ```bash
 $SKILL_DIR/scripts/rename-assets.sh \
-  /tmp/figma-captures/figma-{nodeId}.txt \
+  /tmp/figma-to-react/captures/figma-{nodeId}.txt \
   {assetDir} \
   {componentPath}
 ```

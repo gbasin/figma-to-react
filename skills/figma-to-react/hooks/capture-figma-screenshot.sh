@@ -2,11 +2,11 @@
 #
 # PostToolUse hook for capturing Figma MCP get_screenshot responses
 #
-# Saves screenshot images to /tmp/figma-screenshots/figma-{nodeId}.png
+# Saves screenshot images to /tmp/figma-to-react/screenshots/figma-{nodeId}.png
 # The image data comes as base64 in the tool_response
 #
 
-OUTPUT_DIR="/tmp/figma-screenshots"
+OUTPUT_DIR="/tmp/figma-to-react/screenshots"
 
 # Read the full hook input
 INPUT=$(cat)

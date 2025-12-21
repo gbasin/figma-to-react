@@ -6,18 +6,17 @@ Prepare the environment for capturing Figma MCP responses.
 
 ```bash
 # Clean up any previous run
-rm -f /tmp/figma-skill-capture-active
-rm -rf /tmp/figma-captures
+rm -rf /tmp/figma-to-react
 
 # Arm the hook
-touch /tmp/figma-skill-capture-active
-mkdir -p /tmp/figma-captures
+mkdir -p /tmp/figma-to-react/captures
+touch /tmp/figma-to-react/capture-active
 ```
 
 ## What This Does
 
 The PostToolUse hook watches for Figma MCP calls. When the marker file exists:
-- Captures full response to `/tmp/figma-captures/figma-{nodeId}.txt`
+- Captures full response to `/tmp/figma-to-react/captures/figma-{nodeId}.txt`
 - Suppresses raw output from Claude's context (saves ~50KB per screen)
 - Shows brief confirmation: "Captured to figma-{nodeId}.txt"
 

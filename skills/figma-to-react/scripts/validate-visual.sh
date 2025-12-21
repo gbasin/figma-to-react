@@ -14,7 +14,7 @@
 #   threshold           - Max allowed difference (0-100, default: 5)
 #
 # Output:
-#   - Creates diff image at /tmp/figma-validation/diff-{timestamp}.png
+#   - Creates diff image at /tmp/figma-to-react/validation/diff-{timestamp}.png
 #   - Prints PASS or FAIL with diff percentage
 #   - Exit code: 0 = pass, 1 = fail, 2 = error
 #
@@ -55,7 +55,7 @@ fi
 
 # Create output directory with timestamp
 TIMESTAMP=$(date +%s)
-OUTPUT_DIR="/tmp/figma-validation/${TIMESTAMP}"
+OUTPUT_DIR="/tmp/figma-to-react/validation/${TIMESTAMP}"
 mkdir -p "$OUTPUT_DIR"
 
 # Output paths - all stored together

@@ -5,7 +5,7 @@ Clean up and verify the workflow completed successfully.
 ## Disarm the Hook
 
 ```bash
-rm /tmp/figma-skill-capture-active
+rm /tmp/figma-to-react/capture-active
 ```
 
 This returns Figma MCP to normal operation (output shown, not suppressed).
@@ -33,11 +33,11 @@ Next steps:
   3. Connect to your app's routing
 ```
 
-## Cleanup (Optional)
+## Cleanup
 
-Remove captured responses:
+Remove temporary files:
 ```bash
-rm -rf /tmp/figma-captures
+rm -rf /tmp/figma-to-react
 ```
 
 ## Skill Complete

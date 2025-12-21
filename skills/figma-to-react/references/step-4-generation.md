@@ -30,17 +30,35 @@ Task(
          clientLanguages: "typescript"
        )
 
-       The hook will capture response to /tmp/figma-captures/figma-{nodeId}.txt
+       The hook will capture response to /tmp/figma-to-react/captures/figma-{nodeId}.txt
 
     2. Run the processing script:
        $SKILL_DIR/scripts/process-figma.sh \\
-         /tmp/figma-captures/figma-{nodeId}.txt \\
+         /tmp/figma-to-react/captures/figma-{nodeId}.txt \\
          {componentPath} \\
          {assetDir} \\
          {urlPrefix} \\
          {tokensFile}
 
-    3. Return summary: component path, asset count, any errors.
+    3. Lint and auto-fix Tailwind issues:
+       npx eslint --fix {componentPath}
+
+       This auto-fixes ~90% of MCP output issues:
+       - Class ordering
+       - Unnecessary arbitrary values (translate-x-[-50%] → -translate-x-1/2)
+       - Redundant classes (filter in TW v3)
+       - Shorthand opportunities (top-X bottom-X → inset-y-X)
+
+    4. Check for remaining issues:
+       npx eslint {componentPath}
+
+       Review any warnings that couldn't be auto-fixed:
+       - Invalid classes (e.g., object-50%-50% → object-center)
+       - Context-dependent fixes (overflow-clip vs text-clip)
+
+       Fix these manually based on the component's intent.
+
+    5. Return summary: component path, asset count, eslint fixes applied, any errors.
   """
 )
 ```

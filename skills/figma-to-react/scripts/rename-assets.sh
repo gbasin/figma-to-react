@@ -18,7 +18,7 @@
 #   ./rename-assets.sh <captured-response> <asset-dir> <component-file>
 #
 # Example:
-#   ./rename-assets.sh /tmp/figma-captures/figma-237-2571.txt public/figma-assets src/components/MyScreen.tsx
+#   ./rename-assets.sh /tmp/figma-to-react/captures/figma-237-2571.txt public/figma-assets src/components/MyScreen.tsx
 
 set -e
 

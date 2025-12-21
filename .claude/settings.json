@@ -9,6 +9,15 @@
             "command": "bash -c 'MARKER=\"/tmp/figma-skill-capture-active\"; OUTPUT_DIR=\"/tmp/figma-captures\"; if [ ! -f \"$MARKER\" ]; then cat > /dev/null; echo \"{\\\"decision\\\": \\\"allow\\\"}\"; exit 0; fi; INPUT=$(cat); mkdir -p \"$OUTPUT_DIR\"; NODE_ID=$(echo \"$INPUT\" | jq -r \".tool_input.nodeId // \\\"unknown\\\"\" 2>/dev/null | tr \":\" \"-\"); echo \"$INPUT\" | jq -r \".tool_response // empty\" > \"${OUTPUT_DIR}/figma-${NODE_ID}.txt\"; echo \"{\\\"decision\\\": \\\"allow\\\"}\"'"
           }
         ]
+      },
+      {
+        "matcher": "mcp__plugin_figma_figma-desktop__get_screenshot",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/garybasin/Documents/GitHub/figma-to-react/skills/figma-to-react/hooks/capture-figma-screenshot.sh"
+          }
+        ]
       }
     ]
   }

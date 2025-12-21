@@ -7,7 +7,7 @@
 #
 # Usage:
 #   ./extract-tokens.sh <input-file> <output-css>
-#   ./extract-tokens.sh /tmp/figma-captures/figma-123-456.txt src/styles/figma-tokens.css
+#   ./extract-tokens.sh /tmp/figma-to-react/captures/figma-123-456.txt src/styles/figma-tokens.css
 #
 # If output file exists, tokens are merged (no duplicates).
 

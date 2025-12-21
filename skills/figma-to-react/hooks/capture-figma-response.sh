@@ -2,7 +2,7 @@
 #
 # PostToolUse hook for capturing Figma MCP get_design_context responses
 #
-# ALWAYS captures responses to /tmp/figma-captures/figma-{nodeId}.txt
+# ALWAYS captures responses to /tmp/figma-to-react/captures/figma-{nodeId}.txt
 # ONLY suppresses output when skill is active (marker file exists)
 #
 # This ensures:
@@ -10,8 +10,8 @@
 # - Normal Figma MCP experience when skill is not active
 # - Debug captures available even without skill
 
-MARKER="/tmp/figma-skill-capture-active"
-OUTPUT_DIR="/tmp/figma-captures"
+MARKER="/tmp/figma-to-react/capture-active"
+OUTPUT_DIR="/tmp/figma-to-react/captures"
 
 # Always read the full hook input
 INPUT=$(cat)
