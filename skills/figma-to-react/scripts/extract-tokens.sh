@@ -9,7 +9,7 @@
 #   ./extract-tokens.sh <input-file> <output-css>
 #   ./extract-tokens.sh /tmp/figma-to-react/captures/figma-123-456.txt src/styles/figma-tokens.css
 #
-# If output file exists, tokens are merged (no duplicates).
+# Always overwrites output file. Deduplicates by variable name, preferring non-zero values.
 
 set -e
 
@@ -41,9 +41,16 @@ perl -ne '
   # Match var(--name,fallback) with 1-level nested parens support
   # (?:[^()]|\([^()]*\))+ matches either non-parens or a balanced (...)
   while (/var\((--[^,)]+),((?:[^()]|\([^()]*\))+)\)/g) {
-    print "$1|$2\n";
+    my ($name, $val) = ($1, $2);
+    # Fix double-escaped slashes (\\/ -> \/)
+    $name =~ s/\\\\\//\\\//g;
+    print "$name|$val\n";
   }
-' "$INPUT" | sort -u > "$TEMP_TOKENS"
+' "$INPUT" | \
+  # Sort by name, then by value (reverse so non-"0px" comes before "0px")
+  sort -t'|' -k1,1 -k2,2r | \
+  # Keep first occurrence of each name (the non-zero value)
+  awk -F'|' '!seen[$1]++' > "$TEMP_TOKENS"
 
 # Count tokens found
 TOKEN_COUNT=$(wc -l < "$TEMP_TOKENS" | tr -d ' ')
@@ -55,31 +62,13 @@ fi
 
 echo "Found $TOKEN_COUNT unique CSS variables" >&2
 
-# If output exists, merge with existing tokens
-EXISTING_TOKENS=""
-if [ -f "$OUTPUT" ]; then
-  EXISTING_TOKENS=$(grep -E '^\s+--' "$OUTPUT" 2>/dev/null | sed 's/;//' | sed 's/^\s*//' || true)
-fi
-
-# Write output CSS file
+# Write output CSS file (always overwrite - no merge)
 {
   echo "/* Figma Design Tokens - auto-generated */"
   echo "/* Do not edit manually - regenerate with extract-tokens.sh */"
   echo ":root {"
 
-  # Write existing tokens first (preserve order)
-  if [ -n "$EXISTING_TOKENS" ]; then
-    echo "$EXISTING_TOKENS" | while read -r line; do
-      echo "  ${line};"
-    done
-  fi
-
-  # Add new tokens (skip if already exists)
   while IFS='|' read -r name fallback; do
-    # Check if this token already exists
-    if [ -n "$EXISTING_TOKENS" ] && echo "$EXISTING_TOKENS" | grep -q "^${name}:"; then
-      continue
-    fi
     echo "  ${name}: ${fallback};"
   done < "$TEMP_TOKENS"
 
