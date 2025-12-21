@@ -29,8 +29,10 @@ fi
 # Create output directory if needed
 mkdir -p "$(dirname "$OUTPUT")"
 
-# Temp file for new tokens
-TEMP_TOKENS="/tmp/figma-tokens-$$.txt"
+# Temp file for new tokens (under /tmp/figma-to-react/ for easy cleanup)
+TMP_DIR="/tmp/figma-to-react/tmp"
+mkdir -p "$TMP_DIR"
+TEMP_TOKENS="$TMP_DIR/figma-tokens-$$.txt"
 trap "rm -f $TEMP_TOKENS" EXIT
 
 # Extract all var() patterns: var(--name,fallback)

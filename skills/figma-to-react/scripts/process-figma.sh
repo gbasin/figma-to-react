@@ -50,12 +50,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$ASSET_DIR"
 mkdir -p "$(dirname "$OUTPUT")"
 
-# Temp files
-TEMP_CODE="/tmp/figma-code-$$.txt"
-ASSET_LIST="/tmp/figma-assets-$$.txt"
-MAPPING_FILE="/tmp/figma-mapping-$$.txt"
-HASH_MAP="/tmp/figma-hashes-$$.txt"
-trap "rm -f $TEMP_CODE $ASSET_LIST $MAPPING_FILE $HASH_MAP /tmp/figma-dl-$$-*.bin" EXIT
+# Temp files (all under /tmp/figma-to-react/ for easy cleanup)
+TMP_DIR="/tmp/figma-to-react/tmp"
+mkdir -p "$TMP_DIR"
+TEMP_CODE="$TMP_DIR/figma-code-$$.txt"
+ASSET_LIST="$TMP_DIR/figma-assets-$$.txt"
+MAPPING_FILE="$TMP_DIR/figma-mapping-$$.txt"
+HASH_MAP="$TMP_DIR/figma-hashes-$$.txt"
+trap "rm -f $TEMP_CODE $ASSET_LIST $MAPPING_FILE $HASH_MAP $TMP_DIR/figma-dl-$$-*.bin" EXIT
 
 echo "=== Figma → React Processor ===" >&2
 echo "" >&2
@@ -123,7 +125,7 @@ if [ "$TOTAL_REFS" -gt 0 ]; then
       tr '[:upper:]' '[:lower:]')
 
     # Download to temp
-    TEMP_FILE="/tmp/figma-dl-$$-${BASE_NAME}.bin"
+    TEMP_FILE="$TMP_DIR/figma-dl-$$-${BASE_NAME}.bin"
     if ! curl -sL "$URL" -o "$TEMP_FILE" 2>/dev/null; then
       echo "    ✗ Failed: $BASE_NAME" >&2
       continue

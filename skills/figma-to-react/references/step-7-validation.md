@@ -1,127 +1,92 @@
 # Step 7: Validate Screens
 
-Compare rendered components to Figma screenshots. Loop until visual diff ≤ 5%.
+Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 
 ## Prerequisites
 
 - Dev server running: `pnpm dev`
 - Preview route created (step 6)
-- Tools installed (step 1): ImageMagick, Playwright
+- Figma screenshots captured
 
-## Scripts
+## Script: validate-component.sh
 
-### capture-screenshot.ts
-
-Captures the component element at its natural size using Playwright. The preview route wraps components in `<div data-figma-component>`, and this script screenshots that element directly—no viewport math needed.
+Runs one validation pass. Captures screenshot, compares, returns status.
 
 ```bash
-npx tsx scripts/capture-screenshot.ts <url> <output.png>
-
-# Example:
-npx tsx scripts/capture-screenshot.ts \
-  "http://localhost:5173/figma-preview?screen=Login" \
-  /tmp/figma-to-react/rendered-Login.png
+$SKILL_DIR/scripts/validate-component.sh \
+  <component> <figma-png> <preview-url> <component-path> [prev-diff]
 ```
 
-### validate-visual.sh
+**Exit codes:**
+| Code | Status | Action |
+|------|--------|--------|
+| 0 | `success` | Done - diff ≤ 5% |
+| 1 | `needs_fix` | Make ONE fix, re-run with new diff as prev-diff |
+| 2 | `good_enough` | Done - diff ≤ 1% |
+| 5 | `max_passes` | Done - 10 passes reached, accept current state |
+| 6 | `no_improvement` | Change was reverted, try a DIFFERENT fix |
 
-Compares two images using ImageMagick RMSE. Outputs diff percentage to stdout.
-
-```bash
-./scripts/validate-visual.sh <figma.png> <rendered.png> [component] [pass]
-
-# Example:
-DIFF=$(./scripts/validate-visual.sh \
-  /tmp/figma-to-react/figma-123.png \
-  /tmp/figma-to-react/rendered-Login.png \
-  LoginScreen 1)
-echo "Diff: ${DIFF}%"
-# Output: Diff: 3.45%
+**Output (JSON):**
+```json
+{
+  "status": "needs_fix",
+  "pass": 2,
+  "diff": 8.45,
+  "prev_diff": 12.30,
+  "diff_image": "/tmp/.../pass-2/diff.png",
+  "message": "Pass 2: 8.45% (improved 3.85% from 12.30%)"
+}
 ```
-
-**Output files** in `/tmp/figma-to-react/validation/{component}/`:
-- `figma.png` - Reference image (copied once)
-- `pass-1/`, `pass-2/`, etc:
-  - `rendered.png` - Captured render for that pass
-  - `diff.png` - Heatmap (brighter = more different)
-
-**Dimension check**: The script logs whether dimensions match. With the fixed-dimension wrapper from step 6 (using dimensions from `/tmp/figma-to-react/component-metadata.json`), dimensions should match automatically. If you see a `"WARNING: Dimension mismatch"`, check that the preview route has the correct dimensions set.
 
 ## Validation Loop
 
-Target: **≤ 5% diff**
-
-For each screen, spawn a sub-agent that loops until target is met:
+For each screen, spawn a sub-agent:
 
 ```
 Task(
   subagent_type: "general-purpose",
   prompt: """
-    Validate and fix component until visual diff ≤ 5%.
+    Validate component until done.
 
     INPUTS:
-    - nodeId: "{nodeId}"
+    - component: "{ComponentName}"
     - componentPath: "{componentPath}"
-    - componentName: "{ComponentName}"
+    - figmaPng: "/tmp/figma-to-react/screenshots/figma-{nodeId}.png"
     - previewUrl: "http://localhost:5173/figma-preview?screen={ComponentName}"
+    - SKILL_DIR: "{skillDir}"
 
-    SCRIPTS (relative to figma-to-react repo):
-    - capture: skills/figma-to-react/scripts/capture-screenshot.ts
-    - validate: skills/figma-to-react/scripts/validate-visual.sh
+    Track current diff across iterations.
 
-    LOOP (track pass number starting at 1):
+    LOOP:
 
-    1. GET FIGMA SCREENSHOT (only on first pass)
-       Use whichever Figma MCP server is available:
-       - mcp__plugin_figma_figma__get_screenshot (web - requires auth, uses fileKey)
-       - mcp__plugin_figma_figma-desktop__get_screenshot (desktop - uses active tab)
+    1. RUN VALIDATION
+       result=$($SKILL_DIR/scripts/validate-component.sh \
+         "{ComponentName}" "{figmaPng}" "{previewUrl}" "{componentPath}" $PREV_DIFF)
 
-       Parameters: nodeId: "{nodeId}", fileKey: "{fileKey}" (web only)
-       Save to: /tmp/figma-to-react/figma-{nodeId}.png
+       Parse JSON output. Note the exit code.
 
-    2. CAPTURE RENDERED
-       npx tsx {capture} "{previewUrl}" /tmp/figma-to-react/rendered-{ComponentName}.png
+    2. CHECK STATUS
+       - Exit 0 or 2: DONE - report success
+       - Exit 5: DONE - max passes reached, report final state
+       - Exit 1: Continue to step 3 (fix needed)
+       - Exit 6: Continue to step 3 (try different fix, change was reverted)
 
-    3. VALIDATE
-       DIFF=$({validate} /tmp/figma-to-react/figma-{nodeId}.png /tmp/figma-to-react/rendered-{ComponentName}.png {ComponentName} $PASS)
-       echo "Pass $PASS diff: ${DIFF}%"
+    3. FIX
+       - Read diff_image from output
+       - Bright areas = differences
+       - Make ONE targeted fix to {componentPath}
+       - If exit was 6: your last fix didn't help, try something DIFFERENT
+       - Update PREV_DIFF to current diff
+       - Go to step 1
 
-    4. CHECK RESULT
-       If DIFF ≤ 5: Done, return success
-       If DIFF > 5: Continue to step 5
-
-    5. ANALYZE DIFF
-       Read the diff.png heatmap. Bright areas = differences.
-       Common issues:
-       - h-[200%] or w-[200%] on images → wrong
-       - Negative positioning with overflow-clip
-       - Extreme percentages (>150%)
-       - Wrong colors/backgrounds
-       - Font weight or alignment
-
-    6. FIX COMPONENT
-       Edit {componentPath} to fix the brightest diff area.
-
-    7. INCREMENT PASS and loop to step 2
-
-    MAX: 10 passes. Report final diff % if still above 5%.
-
-    RETURN: status, final diff %, list of fixes
+    RETURN: final status, diff %, fixes made
   """
 )
 ```
 
 ## Run in Parallel
 
-Spawn all validation sub-agents simultaneously. Each uses its own preview URL (`?screen=ComponentName`) on the shared dev server—no conflicts.
-
-## Interpreting Diff Heatmap
-
-- **Black**: Pixels match
-- **Gray**: Minor differences
-- **Bright/white**: Significant differences
-
-Fix brightest areas first for maximum impact.
+Spawn all validation sub-agents simultaneously. Each uses its own preview URL.
 
 ## Next Step
 
