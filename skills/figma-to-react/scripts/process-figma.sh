@@ -59,6 +59,25 @@ MAPPING_FILE="$TMP_DIR/figma-mapping-$$.txt"
 HASH_MAP="$TMP_DIR/figma-hashes-$$.txt"
 trap "rm -f $TEMP_CODE $ASSET_LIST $MAPPING_FILE $HASH_MAP $TMP_DIR/figma-dl-$$-*.bin" EXIT
 
+# Extract nodeId from input filename (e.g., figma-237-2571.txt -> 237-2571)
+NODE_ID=$(basename "$INPUT" | sed -E 's/^figma-(.+)\.txt$/\1/')
+
+# Read dimensions from metadata (saved by capture-figma-metadata.sh hook)
+METADATA_FILE="/tmp/figma-to-react/metadata/${NODE_ID}.json"
+if [ -f "$METADATA_FILE" ]; then
+  FRAME_WIDTH=$(jq -r '.width' "$METADATA_FILE" 2>/dev/null)
+  FRAME_HEIGHT=$(jq -r '.height' "$METADATA_FILE" 2>/dev/null)
+
+  # Validate dimensions are positive integers (security: prevent injection)
+  if ! [[ "$FRAME_WIDTH" =~ ^[0-9]+$ ]] || ! [[ "$FRAME_HEIGHT" =~ ^[0-9]+$ ]]; then
+    FRAME_WIDTH=""
+    FRAME_HEIGHT=""
+  fi
+else
+  FRAME_WIDTH=""
+  FRAME_HEIGHT=""
+fi
+
 echo "=== Figma → React Processor ===" >&2
 echo "" >&2
 
@@ -210,6 +229,35 @@ while IFS='|' read -r VAR_NAME URL; do
   sed -i '' "s|src={${VAR_NAME}}|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
   sed -i '' "s|src={ ${VAR_NAME} }|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
 done < "$ASSET_LIST"
+
+# Step 3.5: Replace size-full with explicit dimensions on root element
+# This ensures the component has fixed dimensions instead of relying on parent container
+if [ -n "$FRAME_WIDTH" ] && [ -n "$FRAME_HEIGHT" ] && [ "$FRAME_WIDTH" != "null" ] && [ "$FRAME_HEIGHT" != "null" ]; then
+  echo "" >&2
+  echo "Step 3.5: Applying root dimensions (${FRAME_WIDTH}x${FRAME_HEIGHT})..." >&2
+
+  # Convert node ID format: 237-2571 -> 237:2571 for matching data-node-id attribute
+  ROOT_NODE_ID="${NODE_ID//-/:}"
+
+  # Replace size-full with explicit dimensions on the root element
+  # The root element has data-node-id matching the frame ID
+  # Note: className may appear before or after data-node-id in the element
+  # Use perl for reliable multi-line matching with both patterns
+  perl -i -0777 -pe "
+    # Pattern 1: className before data-node-id (most common)
+    s/(className=\"[^\"]*?)\bsize-full\b([^\"]*\"[^>]*?data-node-id=\"${ROOT_NODE_ID}\")/\${1}w-[${FRAME_WIDTH}px] h-[${FRAME_HEIGHT}px]\${2}/sg;
+
+    # Pattern 2: data-node-id before className (preserve trailing classes)
+    s/(data-node-id=\"${ROOT_NODE_ID}\"[^>]*?className=\"[^\"]*?)\bsize-full\b([^\"]*\")/\${1}w-[${FRAME_WIDTH}px] h-[${FRAME_HEIGHT}px]\${2}/sg;
+  " "$TEMP_CODE"
+
+  # Verify the replacement happened (use fgrep to match literal brackets)
+  if grep -Fq "w-[${FRAME_WIDTH}px]" "$TEMP_CODE"; then
+    echo "  ✓ Applied w-[${FRAME_WIDTH}px] h-[${FRAME_HEIGHT}px] to root element" >&2
+  else
+    echo "  ⚠ Root element may not have had size-full class" >&2
+  fi
+fi
 
 # Write output
 cp "$TEMP_CODE" "$OUTPUT"

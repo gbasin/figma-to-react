@@ -37,16 +37,40 @@ trap "rm -f $TEMP_TOKENS" EXIT
 
 # Extract all var() patterns: var(--name,fallback)
 # Handle both escaped slashes (--name\/sub) and regular names (--name-sub)
-# Note: Fallback values can contain nested parens like rgba(0,0,0,0.8)
-# Use perl for reliable extraction across platforms
-perl -ne '
-  # Match var(--name,fallback) with 1-level nested parens support
-  # (?:[^()]|\([^()]*\))+ matches either non-parens or a balanced (...)
-  while (/var\((--[^,)]+),((?:[^()]|\([^()]*\))+)\)/g) {
-    my ($name, $val) = ($1, $2);
-    # Fix double-escaped slashes (\\/ -> \/)
-    $name =~ s/\\\\\//\\\//g;
-    print "$name|$val\n";
+# Fallback values can contain arbitrarily nested parens: calc((100% - max(20px, 5vw)) / 2)
+# Use stack-based parenthesis matching for reliable extraction
+perl -e '
+  use strict;
+  use warnings;
+
+  # Read entire file
+  my $content = do { local $/; <> };
+
+  # Find all var(--name, patterns and extract with balanced parens
+  while ($content =~ /var\((--[^,)]+),/g) {
+    my $name = $1;
+    my $start = pos($content);
+    my $depth = 1;
+    my $i = $start;
+    my $len = length($content);
+
+    # Stack-based parenthesis matching
+    while ($i < $len && $depth > 0) {
+      my $c = substr($content, $i, 1);
+      $depth++ if $c eq "(";
+      $depth-- if $c eq ")";
+      $i++;
+    }
+
+    if ($depth == 0) {
+      my $fallback = substr($content, $start, $i - $start - 1);
+      # Trim leading/trailing whitespace from fallback
+      $fallback =~ s/^\s+//;
+      $fallback =~ s/\s+$//;
+      # Fix double-escaped slashes (\\/ -> \/)
+      $name =~ s/\\\\\//\\\//g;
+      print "$name|$fallback\n";
+    }
   }
 ' "$INPUT" | \
   # Sort by name, then by value (reverse so non-"0px" comes before "0px")
