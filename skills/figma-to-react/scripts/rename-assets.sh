@@ -100,7 +100,14 @@ perl -0777 -ne '
 
         # Avoid overwriting existing files
         if [ -f "$NEW_PATH" ] && [ "$ASSET_FILE" != "$NEW_PATH" ]; then
-          SHORT_HASH=$(md5 -q "$ASSET_FILE" 2>/dev/null | cut -c1-4 || echo "xxxx")
+          # Cross-platform md5: macOS uses md5 -q, Linux uses md5sum
+          if command -v md5 &>/dev/null; then
+            SHORT_HASH=$(md5 -q "$ASSET_FILE" 2>/dev/null | cut -c1-4 || echo "xxxx")
+          elif command -v md5sum &>/dev/null; then
+            SHORT_HASH=$(md5sum "$ASSET_FILE" 2>/dev/null | cut -d' ' -f1 | cut -c1-4 || echo "xxxx")
+          else
+            SHORT_HASH="xxxx"
+          fi
           NEW_NAME="${MEANINGFUL}-${SHORT_HASH}.${EXT}"
           NEW_PATH="$ASSET_DIR/$NEW_NAME"
         fi
@@ -109,9 +116,13 @@ perl -0777 -ne '
           echo "  $BASENAME → $NEW_NAME" >&2
           mv "$ASSET_FILE" "$NEW_PATH"
 
-          # Update component references
+          # Update component references (cross-platform sed -i)
           OLD_REF=$(basename "$ASSET_FILE")
-          sed -i '' "s|${OLD_REF}|${NEW_NAME}|g" "$COMPONENT"
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|${OLD_REF}|${NEW_NAME}|g" "$COMPONENT"
+          else
+            sed -i "s|${OLD_REF}|${NEW_NAME}|g" "$COMPONENT"
+          fi
 
           RENAME_COUNT=$((RENAME_COUNT + 1))
         fi

@@ -40,14 +40,16 @@ async function capture() {
   const page = await context.newPage();
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    // Use domcontentloaded instead of networkidle because Vite's HMR WebSocket
+    // keeps a persistent connection open, preventing networkidle from ever firing
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    // Find the component element and wait for it to be visible
+    const element = await page.locator('[data-figma-component]');
+    await element.waitFor({ state: 'visible', timeout: 10000 });
 
     // Small delay for any animations to settle
     await page.waitForTimeout(500);
-
-    // Find the component element and screenshot it at its natural size
-    const element = await page.locator('[data-figma-component]');
-    await element.waitFor({ state: 'visible', timeout: 10000 });
     const box = await element.boundingBox();
     await element.screenshot({ path: output });
     console.log(`Screenshot saved: ${output}`);

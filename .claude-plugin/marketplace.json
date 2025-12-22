@@ -5,15 +5,15 @@
     "email": "gary@gbasin.com"
   },
   "metadata": {
-    "description": "Claude Code plugin for converting Figma flows to TypeScript React components",
-    "version": "0.9.7"
+    "description": "Convert Figma designs to pixel-perfect React components with Tailwind CSS",
+    "version": "0.9.8"
   },
   "plugins": [
     {
       "name": "figma-to-react",
       "source": "./",
-      "description": "Convert Figma screen flows into pixel-perfect TypeScript React components with Tailwind CSS",
-      "version": "0.9.7",
+      "description": "Convert Figma designs to pixel-perfect React components with Tailwind CSS",
+      "version": "0.9.8",
       "author": {
         "name": "Gary Basin"
       },

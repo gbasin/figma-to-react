@@ -34,7 +34,7 @@ Task(
          nodeId: "{nodeId}"
 
        A hook automatically extracts dimensions and saves them to
-       /tmp/figma-to-react/component-metadata.json (keyed by nodeId).
+       /tmp/figma-to-react/metadata/{nodeId}.json.
 
     2. Call the Figma MCP get_design_context tool.
 
@@ -102,7 +102,7 @@ Track for each screen:
 - Figma nodeId (needed for validation)
 - Success/failure status
 
-Dimensions are stored in `/tmp/figma-to-react/component-metadata.json` (keyed by component name) for step 6.
+Dimensions are stored in `/tmp/figma-to-react/metadata/{ComponentName}.json` for step 6.
 
 ## Next Step
 

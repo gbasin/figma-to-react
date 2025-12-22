@@ -11,7 +11,7 @@ The validation step needs to screenshot each component in isolation. A preview r
 1. **Get component list and dimensions from step 4**
 
    You generated components in step 4. Collect their names, paths, and dimensions
-   from `/tmp/figma-to-react/component-metadata.json`.
+   from `/tmp/figma-to-react/metadata/{ComponentName}.json` for each component.
 
 2. **Detect framework** (from step 2 config)
 
@@ -35,7 +35,7 @@ The validation step needs to screenshot each component in isolation. A preview r
      // ... one entry per component
    };
 
-   // Dimensions from Figma (from component-metadata.json)
+   // Dimensions from Figma (from /tmp/figma-to-react/metadata/{ComponentName}.json)
    const dimensions: Record<string, { width: number; height: number }> = {
      ComponentA: { width: 390, height: 844 },
      ComponentB: { width: 1440, height: 900 },
@@ -91,7 +91,7 @@ The validation step needs to screenshot each component in isolation. A preview r
      ComponentB,
    };
 
-   // Dimensions from Figma (from component-metadata.json)
+   // Dimensions from Figma (from /tmp/figma-to-react/metadata/{ComponentName}.json)
    const dimensions: Record<string, { width: number; height: number }> = {
      ComponentA: { width: 390, height: 844 },
      ComponentB: { width: 1440, height: 900 },

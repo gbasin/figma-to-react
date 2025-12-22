@@ -4,7 +4,7 @@ Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 
 ## Prerequisites
 
-- Dev server running: `pnpm dev`
+- Dev server running: `pnpm dev` (note the port from output, e.g., `localhost:3000` or `localhost:5173`)
 - Preview route created (step 6)
 - Figma screenshots captured
 
@@ -52,8 +52,10 @@ Task(
     - component: "{ComponentName}"
     - componentPath: "{componentPath}"
     - figmaPng: "/tmp/figma-to-react/screenshots/figma-{nodeId}.png"
-    - previewUrl: "http://localhost:5173/figma-preview?screen={ComponentName}"
+    - previewUrl: "{devServerUrl}/figma-preview?screen={ComponentName}"
     - SKILL_DIR: "{skillDir}"
+
+    NOTE: {devServerUrl} is the dev server URL detected in step 6 (e.g., http://localhost:3000)
 
     Track current diff across iterations.
 

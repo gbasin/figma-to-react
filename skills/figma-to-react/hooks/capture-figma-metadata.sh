@@ -6,7 +6,7 @@
 # Extracts frame dimensions from XML response and saves to component-metadata.json.
 #
 # Input (stdin): JSON with tool_input and tool_result
-# Output: Updated /tmp/figma-to-react/component-metadata.json
+# Output: /tmp/figma-to-react/metadata/{nodeId}.json
 #
 
 set -e
@@ -74,28 +74,18 @@ fi
 WIDTH=$(printf "%.0f" "$WIDTH")
 HEIGHT=$(printf "%.0f" "$HEIGHT")
 
-# Create metadata directory
-METADATA_FILE="/tmp/figma-to-react/component-metadata.json"
-mkdir -p "$(dirname "$METADATA_FILE")"
+# Create metadata directory (per-file approach avoids race conditions)
+METADATA_DIR="/tmp/figma-to-react/metadata"
+mkdir -p "$METADATA_DIR"
 
-# Initialize file if it doesn't exist
-if [ ! -f "$METADATA_FILE" ]; then
-  echo '{"components":{}}' > "$METADATA_FILE"
-fi
-
-# Sanitize node ID for use as JSON key (replace : with -)
+# Sanitize node ID for filename (replace : with -)
 SAFE_NODE_ID="${NODE_ID//:/-}"
+METADATA_FILE="${METADATA_DIR}/${SAFE_NODE_ID}.json"
 
-# Update the metadata file - keyed by nodeId since we don't have component name yet
-jq --arg nodeId "$NODE_ID" \
-   --arg safeId "$SAFE_NODE_ID" \
-   --argjson width "$WIDTH" \
-   --argjson height "$HEIGHT" \
-   '.components[$safeId] = {
-      nodeId: $nodeId,
-      width: $width,
-      height: $height
-    }' "$METADATA_FILE" > "${METADATA_FILE}.tmp" && mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
+# Write per-nodeId file (atomic, no contention)
+cat > "$METADATA_FILE" << EOF
+{"nodeId": "$NODE_ID", "width": $WIDTH, "height": $HEIGHT}
+EOF
 
 echo "✓ Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT}" >&2
 

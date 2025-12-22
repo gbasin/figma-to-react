@@ -64,12 +64,12 @@ if ! command -v magick &> /dev/null; then
 fi
 
 # Create output directories
-COMPONENT_DIR="/tmp/figma-to-react/validation/${COMPONENT}"
-PASS_DIR="${COMPONENT_DIR}/pass-${PASS}"
+VALIDATION_DIR="/tmp/figma-to-react/validation/${COMPONENT}"
+PASS_DIR="${VALIDATION_DIR}/pass-${PASS}"
 mkdir -p "$PASS_DIR"
 
 # Output paths
-FIGMA_COPY="${COMPONENT_DIR}/figma.png"
+FIGMA_COPY="${VALIDATION_DIR}/figma.png"
 RENDERED_COPY="${PASS_DIR}/rendered.png"
 DIFF_IMG="${PASS_DIR}/diff.png"
 RESIZED_FIGMA="${PASS_DIR}/.figma-resized.png"
@@ -113,11 +113,10 @@ magick "$COMPARE_IMG" -alpha off "$NORM_FIGMA"
 magick "$RENDERED_IMG" -alpha off "$NORM_RENDERED"
 
 # Create heatmap diff (brighter = more different)
-# Output as RGB (not grayscale) for better Preview.app compatibility
+# No auto-level so differences remain proportional to actual magnitude
 magick "$NORM_FIGMA" "$NORM_RENDERED" \
   -compose difference -composite \
   -grayscale Rec709Luminance \
-  -auto-level \
   -colorspace sRGB \
   "$DIFF_IMG"
 

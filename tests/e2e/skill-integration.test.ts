@@ -163,7 +163,7 @@ describe('Validation Script Unit Tests', () => {
 
     const content = await fs.readFile(script, 'utf-8');
     expect(content).toContain('#!/');
-    expect(content).toContain('component-metadata.json');
+    expect(content).toContain('/tmp/figma-to-react/metadata');
   });
 
   it('rename-assets.sh should exist and handle asset renaming', async () => {
