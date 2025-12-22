@@ -61,6 +61,10 @@ EOF
 else
   # Link to existing nodeId file
   if [ -f "$NODE_FILE" ]; then
+    if ! command -v jq >/dev/null 2>&1; then
+      echo "Error: jq is required to read node metadata. Install jq and try again." >&2
+      exit 1
+    fi
     # Read existing and add component info
     EXISTING=$(cat "$NODE_FILE")
     WIDTH=$(echo "$EXISTING" | jq -r '.width')
