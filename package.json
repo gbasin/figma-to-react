@@ -1,6 +1,6 @@
 {
   "name": "figma-to-react",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "Convert Figma designs to pixel-perfect React components with Tailwind CSS",
   "private": true,
   "type": "module",
