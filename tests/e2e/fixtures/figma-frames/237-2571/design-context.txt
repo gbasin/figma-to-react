@@ -1,0 +1,160 @@
+const imgImage = "http://localhost:3845/assets/1b6d4539c46d274f3b3f2dff6bc922886db22f2c.png";
+const imgFace = "http://localhost:3845/assets/98ca944038b6f2fc8213017092371e7af1864076.svg";
+const imgRectangle266 = "http://localhost:3845/assets/1fa574cafe4b51277284f40585da8f6838adb8dd.svg";
+const imgRectangle267 = "http://localhost:3845/assets/46dfc3cc4d6c8ba2e87a1f4db406383f151fbfc2.svg";
+const imgRectangle268 = "http://localhost:3845/assets/2962cca0ec2b683014aaac1727d26b918f5be006.svg";
+const imgOutlineLeft = "http://localhost:3845/assets/3802ef43721f5a4c0381374321f0b01c63a1fb9d.svg";
+const imgOutlineRight = "http://localhost:3845/assets/a317dd82687c1a5171b900d1e01a8b6563d93ab8.svg";
+const img = "http://localhost:3845/assets/ba1be2a49439291b10c5cf5a1b6de51cdf7d177f.svg";
+const img1 = "http://localhost:3845/assets/8b3d0123dffb8663121d2943ac54c88a70fbde76.svg";
+const img2 = "http://localhost:3845/assets/c93403e95c97a3d63f780dbabfc50ce0b589f8cd.svg";
+const img3 = "http://localhost:3845/assets/1358b509215b042c33a5c776d9fc7a0af187cadd.svg";
+const img4 = "http://localhost:3845/assets/b381a62eac44a5d86a67739c863b3ad497dff1fd.svg";
+type HeadTurnPictogramProps = {
+  className?: string;
+  direction?: "right" | "left";
+};
+
+function HeadTurnPictogram({ className, direction = "left" }: HeadTurnPictogramProps) {
+  return (
+    <div className={className} data-name="direction=left" data-node-id="238:1725">
+      <div className="absolute h-[60px] left-[15px] top-[22px] w-[54px]" data-name="face" data-node-id="238:1727">
+        <div className="absolute inset-[0_-2.78%]">
+          <img alt="" className="block max-w-none size-full" src={imgFace} />
+        </div>
+      </div>
+      <div className="absolute flex h-[100px] items-center justify-center left-[50px] top-[2px] w-[32px]">
+        <div className="flex-none rotate-[180deg] scale-y-[-100%]">
+          <div className="h-[100px] relative w-[32px]" data-node-id="238:1738">
+            <div className="absolute inset-[-1.5%_-4.69%]" style={{ "--stroke-0": "rgba(255, 255, 255, 1)" } as React.CSSProperties}>
+              <img alt="" className="block max-w-none size-full" src={imgRectangle266} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="absolute h-[100px] left-[2px] top-[2px] w-[32px]" data-node-id="238:1739">
+        <div className="absolute inset-[-1.5%_-4.69%]" style={{ "--stroke-0": "rgba(255, 255, 255, 1)" } as React.CSSProperties}>
+          <img alt="" className="block max-w-none size-full" src={imgRectangle267} />
+        </div>
+      </div>
+      <div className="absolute h-[35px] left-[2px] top-[67px] w-[32px]" data-node-id="238:1740">
+        <div className="absolute inset-[-4.29%_-4.69%]" style={{ "--stroke-0": "rgba(255, 255, 255, 1)" } as React.CSSProperties}>
+          <img alt="" className="block max-w-none size-full" src={imgRectangle268} />
+        </div>
+      </div>
+      <div className="absolute flex h-[35px] items-center justify-center left-[2px] top-[2px] w-[32px]">
+        <div className="flex-none scale-y-[-100%]">
+          <div className="h-[35px] relative w-[32px]" data-node-id="238:1741">
+            <div className="absolute inset-[-4.29%_-4.69%]" style={{ "--stroke-0": "rgba(255, 255, 255, 1)" } as React.CSSProperties}>
+              <img alt="" className="block max-w-none size-full" src={imgRectangle268} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+type MotionFrameProps = {
+  className?: string;
+  variant?: "start" | "left progress" | "left success" | "right progress" | "success";
+};
+
+function MotionFrame({ className, variant = "start" }: MotionFrameProps) {
+  return (
+    <div className={className} data-name="variant=start" data-node-id="238:1678">
+      <div className="absolute bottom-[0.14%] left-0 top-[0.14%] w-[118px] z-[3]" data-name="outline left" data-node-id="238:1683">
+        <div className="absolute inset-[0.05%_0]" style={{ "--fill-0": "rgba(255, 255, 255, 1)" } as React.CSSProperties}>
+          <img alt="" className="block max-w-none size-full" src={imgOutlineLeft} />
+        </div>
+      </div>
+      <div className="absolute bottom-[0.6px] right-0 top-[0.6px] w-[117px] z-[2]" data-name="outline right" data-node-id="238:1684">
+        <div className="absolute inset-[0.06%_0]" style={{ "--fill-0": "rgba(255, 255, 255, 1)" } as React.CSSProperties}>
+          <img alt="" className="block max-w-none size-full" src={imgOutlineRight} />
+        </div>
+      </div>
+      <div className="basis-0 grow h-full min-h-px min-w-px overflow-clip relative rounded-[var(--border-radius\/full,1000px)] shrink-0 z-[1]" data-name="image" data-node-id="238:1685">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <img alt="" className="absolute h-[200%] left-[-31.02%] max-w-none top-[-30.68%] w-[162.04%]" src={imgImage} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MotionMobile() {
+  return (
+    <div className="bg-[var(--background\/surface-alt,#636670)] content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center overflow-clip p-[var(--space\/none,0px)] relative rounded-[var(--border-radius\/large,8px)] size-full" data-name="Motion / Mobile 3" data-node-id="237:2571">
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex gap-[var(--space\/1,8px)] isolate items-start px-[var(--space\/1_5,12px)] py-[var(--space\/1,8px)] relative shrink-0 w-full z-[6]" data-name="Navigation Bar" data-node-id="237:2572">
+        <div className="absolute content-stretch flex flex-col h-[48px] items-center justify-center overflow-clip right-[12px] rounded-[var(--border-radius\/medium,4px)] top-1/2 translate-y-[-50%] z-[2]" data-name="exit button" data-node-id="I237:2572;2708:1961">
+          <div className="basis-0 content-stretch flex flex-col gap-[var(--space\/1,0px)] grow items-center justify-center min-h-px min-w-px overflow-clip p-[var(--space\/1_5,12px)] relative rounded-[var(--border-radius\/medium,4px)] shrink-0 w-full" data-name="padding" data-node-id="I237:2572;2708:1961;2026:14620">
+            <div className="overflow-clip relative shrink-0 size-[24px]" data-name="icon" data-node-id="I237:2572;2708:1961;2026:14620;632:805">
+              <div className="absolute inset-[26.43%_26.64%_26.43%_26.22%]" data-name="base" data-node-id="I237:2572;2708:1961;2026:14620;632:805;8:1866">
+                <div className="absolute inset-0" style={{ "--fill-0": "rgba(247, 249, 250, 1)" } as React.CSSProperties}>
+                  <img alt="" className="block max-w-none size-full" src={img} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute content-stretch flex flex-col h-[48px] items-center justify-center left-[12px] overflow-clip rounded-[var(--border-radius\/medium,4px)] top-1/2 translate-y-[-50%] z-[1]" data-name="back button" data-node-id="I237:2572;2708:1962">
+          <div className="basis-0 content-stretch flex flex-col gap-[var(--space\/1,0px)] grow items-center justify-center min-h-px min-w-px overflow-clip p-[var(--space\/1_5,12px)] relative rounded-[var(--border-radius\/medium,4px)] shrink-0 w-full" data-name="padding" data-node-id="I237:2572;2708:1962;2026:14620">
+            <div className="overflow-clip relative shrink-0 size-[24px]" data-name="icon" data-node-id="I237:2572;2708:1962;2026:14620;632:805">
+              <div className="absolute inset-[17.89%_12.5%_17.89%_10.77%]" data-name="base" data-node-id="I237:2572;2708:1962;2026:14620;632:805;8:2124">
+                <div className="absolute inset-0" style={{ "--fill-0": "rgba(247, 249, 250, 1)" } as React.CSSProperties}>
+                  <img alt="" className="block max-w-none size-full" src={img1} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/3,0px)] h-[88px] items-center px-[var(--space\/2,16px)] py-[var(--space\/1,8px)] shrink-0 w-full z-[5]" data-name="banner" data-node-id="237:2573" />
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/2,16px)] h-[374px] items-center overflow-clip pb-[var(--space\/1,8px)] pt-[var(--space\/none,0px)] px-[var(--space\/2,16px)] relative shrink-0 w-full z-[4]" data-name="Capture frame" data-node-id="237:2575">
+        <MotionFrame className="basis-0 content-stretch flex gap-[var(--space\/none,0px)] grow isolate items-center min-h-px min-w-px overflow-clip p-[var(--space\/1,8px)] relative rounded-[var(--border-radius\/full,1000px)] shrink-0 w-[259px]" />
+        <div className="absolute bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/1,0px)] items-center justify-center left-[calc(50%+0.5px)] p-[var(--space\/4,32px)] rounded-[var(--border-radius\/large,8px)] top-1/2 translate-x-[-50%] translate-y-[-50%]" data-name="Capture Dialog" data-node-id="237:2577">
+          <HeadTurnPictogram className="h-[104px] relative shrink-0 w-[84px]" />
+        </div>
+      </div>
+      <div className="basis-0 bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/2,0px)] grow items-center min-h-px min-w-px overflow-clip px-[var(--space\/2,16px)] py-[var(--space\/1,8px)] relative shrink-0 w-full z-[3]" data-name="Instructions" data-node-id="237:2578">
+        <div className="content-stretch flex flex-col gap-[var(--space\/1,8px)] items-center p-[var(--space\/none,0px)] relative shrink-0 w-full" data-name="text" data-node-id="237:2579">
+          <p className="font-['Lota_Grotesque_Alt_1:Regular',sans-serif] leading-[24px] not-italic relative shrink-0 text-[16px] text-[color:var(--content\/always-light,#f7f9fa)] text-center w-full" data-node-id="237:2581">
+            Turn your head slowly to both sides
+          </p>
+        </div>
+      </div>
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center justify-end min-w-[320px] overflow-clip px-[var(--space\/3,24px)] py-[var(--space\/none,0px)] relative shrink-0 w-full z-[2]" data-name="Button Dock Capture" data-node-id="237:2583">
+        <div className="content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center justify-center p-[var(--space\/none,0px)] relative shrink-0 w-full z-[1]" data-name="footer" data-node-id="I237:2583;2603:5165">
+          <div className="h-[32px] relative shrink-0 w-[144px] z-[1]" data-name="watermark" data-node-id="I237:2583;2603:5166">
+            <div className="absolute h-[15.038px] left-[calc(50%+30px)] top-[calc(50%-0.48px)] translate-x-[-50%] translate-y-[-50%] w-[66px]" data-name="/ 01 Onfido logo / onfido-logo" data-node-id="I237:2583;2603:5166;14:333">
+              <div className="absolute inset-[0_-0.57%_20%_30.68%]" data-name="/ 01 Onfido logo / sub-elements / onfido-wordmark" data-node-id="I237:2583;2603:5166;14:333;14:253">
+                <div className="absolute inset-[0_0.81%_0_0]" data-name="onfido" data-node-id="I237:2583;2603:5166;14:333;14:253;14:275">
+                  <div className="absolute inset-0" style={{ "--fill-0": "rgba(180, 186, 197, 1)" } as React.CSSProperties}>
+                    <img alt="" className="block max-w-none size-full" src={img2} />
+                  </div>
+                </div>
+              </div>
+              <div className="absolute inset-[0_77.27%_0_0]" data-name="/ 01 Onfido logo / sub-elements / onfido-brandmark" data-node-id="I237:2583;2603:5166;14:333;14:254">
+                <div className="absolute inset-[32.06%_23.81%_0.21%_23.4%]" data-name="Union" data-node-id="I237:2583;2603:5166;14:333;14:254;14:285">
+                  <div className="absolute inset-0" style={{ "--fill-0": "rgba(180, 186, 197, 1)" } as React.CSSProperties}>
+                    <img alt="" className="block max-w-none size-full" src={img3} />
+                  </div>
+                </div>
+                <div className="absolute inset-[0_0_23.4%_0]" data-name="Union" data-node-id="I237:2583;2603:5166;14:333;14:254;14:288">
+                  <div className="absolute inset-0" style={{ "--fill-0": "rgba(180, 186, 197, 1)" } as React.CSSProperties}>
+                    <img alt="" className="block max-w-none size-full" src={img4} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="absolute flex flex-col font-['Lota_Grotesque_Alt_1:SemiBold',sans-serif] h-[10px] justify-center leading-[0] left-[calc(50%-63px)] not-italic text-[10px] text-[color:var(--content\/secondary,#b4bac5)] top-1/2 tracking-[0.2px] translate-y-[-50%] w-[55px]" data-node-id="I237:2583;2603:5166;14:334">
+              <p className="leading-[24px]">Powered by</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="absolute blur-[20px] filter h-[854px] left-[calc(50%+0.5px)] top-1/2 translate-x-[-50%] translate-y-[-50%] w-[534px] z-[1]" data-name="face-examples" data-node-id="237:2584">
+        <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgImage} />
+      </div>
+    </div>
+  );
+}

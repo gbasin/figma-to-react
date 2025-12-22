@@ -1,0 +1,18 @@
+<frame id="237:2571" name="Motion / Mobile 3" x="507" y="-596" width="393" height="852">
+  <instance id="237:2572" name="Navigation Bar" x="0" y="0" width="393" height="64" />
+  <frame id="237:2573" name="banner" x="0" y="64" width="393" height="88">
+    <instance id="237:2574" name="Banner" x="16" y="8" width="361" height="72" hidden="true" />
+  </frame>
+  <frame id="237:2575" name="Capture frame" x="0" y="152" width="393" height="374">
+    <instance id="237:2576" name="Motion Frame" x="67" y="0" width="259" height="366" />
+    <instance id="237:2577" name="Capture Dialog" x="123" y="103" width="148" height="168" />
+  </frame>
+  <frame id="237:2578" name="Instructions" x="0" y="526" width="393" height="294">
+    <frame id="237:2579" name="text" x="16" y="8" width="361" height="24">
+      <text id="237:2580" name="title" x="0" y="0" width="361" height="40" hidden="true" />
+      <text id="237:2581" name="body" x="0" y="0" width="361" height="24" />
+    </frame>
+  </frame>
+  <instance id="237:2583" name="Button Dock Capture" x="0" y="820" width="393" height="32" />
+  <instance id="237:2584" name="face-examples" x="-70" y="-1" width="534" height="854" />
+</frame>

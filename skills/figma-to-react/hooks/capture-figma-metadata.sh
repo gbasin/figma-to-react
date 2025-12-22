@@ -14,24 +14,29 @@ set -e
 # Read JSON from stdin
 INPUT=$(cat)
 
-# Check if tool call was successful
-TOOL_ERROR=$(echo "$INPUT" | jq -r '.tool_result.is_error // false')
-if [ "$TOOL_ERROR" = "true" ]; then
-  exit 0
-fi
-
 # Extract nodeId from tool_input
 NODE_ID=$(echo "$INPUT" | jq -r '.tool_input.nodeId // empty')
 if [ -z "$NODE_ID" ]; then
   echo "Warning: No nodeId in get_metadata call" >&2
+  echo '{}'
   exit 0
 fi
 
-# Extract the XML content from tool_result
-# The result is typically in .tool_result.content[0].text
-XML_CONTENT=$(echo "$INPUT" | jq -r '.tool_result.content[0].text // empty')
+# Extract the XML content from tool_response (not tool_result!)
+# The response can be a string or array of content blocks
+XML_CONTENT=$(echo "$INPUT" | jq -r '
+  .tool_response as $resp |
+  if ($resp | type) == "array" then
+    $resp[0].text // empty
+  elif ($resp | type) == "string" then
+    $resp
+  else
+    empty
+  end
+' 2>/dev/null)
 if [ -z "$XML_CONTENT" ]; then
   echo "Warning: No XML content in get_metadata response" >&2
+  echo '{}'
   exit 0
 fi
 
@@ -61,6 +66,7 @@ fi
 if [ -z "$WIDTH" ] || [ -z "$HEIGHT" ]; then
   echo "Warning: Could not extract dimensions from get_metadata response" >&2
   echo "XML preview: ${XML_CONTENT:0:500}" >&2
+  echo '{}'
   exit 0
 fi
 
@@ -91,4 +97,7 @@ jq --arg nodeId "$NODE_ID" \
       height: $height
     }' "$METADATA_FILE" > "${METADATA_FILE}.tmp" && mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
 
-echo "Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT}" >&2
+echo "✓ Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT}" >&2
+
+# Output JSON for hook system
+echo '{}'

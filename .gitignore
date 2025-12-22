@@ -1,2 +1,4 @@
 .DS_Store
 demo/
+node_modules/
+tests/e2e/fixtures/test-project/node_modules/
