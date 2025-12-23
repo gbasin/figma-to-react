@@ -23,6 +23,16 @@
         ]
       },
       {
+        "matcher": "mcp__figma__get_metadata",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/skills/figma-to-react/hooks/capture-figma-metadata.sh",
+            "timeout": 30
+          }
+        ]
+      },
+      {
         "matcher": "mcp__plugin_figma_figma__get_design_context",
         "hooks": [
           {
@@ -43,6 +53,16 @@
         ]
       },
       {
+        "matcher": "mcp__figma__get_design_context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/skills/figma-to-react/hooks/capture-figma-response.sh",
+            "timeout": 30
+          }
+        ]
+      },
+      {
         "matcher": "mcp__plugin_figma_figma__get_screenshot",
         "hooks": [
           {
@@ -54,6 +74,16 @@
       },
       {
         "matcher": "mcp__plugin_figma_figma-desktop__get_screenshot",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/skills/figma-to-react/hooks/capture-figma-screenshot.sh",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__figma__get_screenshot",
         "hooks": [
           {
             "type": "command",

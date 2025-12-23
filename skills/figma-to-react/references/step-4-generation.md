@@ -26,11 +26,12 @@ Task(
     1. Call the Figma MCP get_metadata tool to get frame dimensions.
 
        Use whichever server is available:
-       - mcp__plugin_figma_figma__get_metadata (web - requires auth, uses fileKey)
-       - mcp__plugin_figma_figma-desktop__get_metadata (desktop - uses active tab)
+       - mcp__figma__get_metadata (direct MCP - uses fileKey)
+       - mcp__plugin_figma_figma__get_metadata (marketplace plugin - uses fileKey)
+       - mcp__plugin_figma_figma-desktop__get_metadata (desktop plugin - uses active tab)
 
        Parameters:
-         fileKey: "{fileKey}" (web only)
+         fileKey: "{fileKey}" (not needed for desktop)
          nodeId: "{nodeId}"
 
        A hook automatically extracts dimensions and saves them to
@@ -39,8 +40,9 @@ Task(
     2. Call the Figma MCP get_design_context tool.
 
        Use whichever server is available:
-       - mcp__plugin_figma_figma__get_design_context (web - requires auth, uses fileKey)
-       - mcp__plugin_figma_figma-desktop__get_design_context (desktop - uses active tab)
+       - mcp__figma__get_design_context (direct MCP - uses fileKey)
+       - mcp__plugin_figma_figma__get_design_context (marketplace plugin - uses fileKey)
+       - mcp__plugin_figma_figma-desktop__get_design_context (desktop plugin - uses active tab)
 
        Parameters:
          fileKey: "{fileKey}" (web only)
