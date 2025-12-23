@@ -4,7 +4,7 @@ Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 
 ## Prerequisites
 
-- Dev server running: `pnpm dev` (note the port from output, e.g., `localhost:3000` or `localhost:5173`)
+- Dev server running (started in step 3b)
 - Preview route created (step 3b)
 - Figma screenshots captured
 - Bun installed (https://bun.sh)

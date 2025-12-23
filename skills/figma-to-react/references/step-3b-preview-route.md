@@ -56,15 +56,27 @@ const modules = import.meta.glob('../components/figma/*.tsx');
 const modules = import.meta.glob('../../path/to/figma/*.tsx');
 ```
 
+## Start Dev Server
+
+After creating the route, start the dev server:
+
+```bash
+pnpm dev
+# or: npm run dev
+```
+
+Note the port from output (e.g., `localhost:5173` for Vite, `localhost:3000` for Next.js).
+
 ## Tell the User
 
-After creating the preview route:
+After starting the server:
 
 ```
 Preview route created at /figma-preview
+Dev server running at http://localhost:[port]
 
 As components are generated, they will automatically appear in the preview.
-You can open http://localhost:[port]/figma-preview to watch progress.
+Open http://localhost:[port]/figma-preview to watch progress.
 ```
 
 ## Next Step
