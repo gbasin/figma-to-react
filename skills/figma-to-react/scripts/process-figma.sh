@@ -259,6 +259,16 @@ if [ -n "$FRAME_WIDTH" ] && [ -n "$FRAME_HEIGHT" ] && [ "$FRAME_WIDTH" != "null"
   fi
 fi
 
+# Step 3.6: Fix collapsed containers
+# Containers with only absolute children collapse to padding-only height
+DIMENSIONS_FILE="/tmp/figma-to-react/metadata/${NODE_ID}-dimensions.json"
+if [ -f "$DIMENSIONS_FILE" ] && [ -x "$SCRIPT_DIR/fix-collapsed-containers.sh" ]; then
+  echo "" >&2
+  echo "Step 3.6: Fixing collapsed containers..." >&2
+  "$SCRIPT_DIR/fix-collapsed-containers.sh" "$TEMP_CODE" "$DIMENSIONS_FILE" > "$TEMP_CODE.fixed"
+  mv "$TEMP_CODE.fixed" "$TEMP_CODE"
+fi
+
 # Write output
 cp "$TEMP_CODE" "$OUTPUT"
 

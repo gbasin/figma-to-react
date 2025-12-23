@@ -1,26 +1,29 @@
 # figma-to-react
 
-A Claude Code plugin that converts Figma screen flows into pixel-perfect TypeScript React components with Tailwind CSS.
+A Claude Code plugin that converts Figma designs into pixel-perfect TypeScript React components with Tailwind CSS.
 
 ## Features
 
 - **Pixel-perfect conversion** — Uses Figma MCP output verbatim, preserving exact layout and styling
-- **Smart asset handling** — Downloads assets, deduplicates by content hash, renames generics to meaningful names
-- **Auto-detection** — Automatically detects screens, flow name, output directories, and frame dimensions
-- **Interactive components** — Wires up inputs, dropdowns, toggles, and navigation
-- **iOS-like animations** — Adds appropriate animations for mobile flows
+- **Visual validation** — Automated screenshot comparison with iterative fixes until match
+- **Smart asset handling** — Downloads, deduplicates by content hash, renames to semantic names
+- **Token extraction** — Extracts CSS variables from Figma designs automatically
+- **Auto-detection** — Detects framework, directories, and frame dimensions
+- **Collapsed container fix** — Automatically fixes containers with only absolute children
 
 ## Prerequisites
 
-1. **Figma MCP Server** configured and authenticated
+1. **Figma MCP Server** — Either web or desktop, authenticated:
    ```
-   # Test with:
    mcp__figma__whoami
    ```
 
-2. **React + Tailwind CSS** project (Figma MCP outputs Tailwind classes)
+2. **React + Tailwind CSS project** — Vite, Next.js, or CRA
 
-3. **Hooks** — Auto-configured on plugin install. Restart Claude Code after installing to activate.
+3. **ImageMagick** (for visual validation):
+   ```bash
+   brew install imagemagick
+   ```
 
 ## Installation
 
@@ -30,63 +33,67 @@ A Claude Code plugin that converts Figma screen flows into pixel-perfect TypeScr
 
 # Install the plugin
 /plugin install figma-to-react
+
+# Restart Claude Code to activate hooks
 ```
 
 ## Usage
-
-### Natural Language
 
 ```
 Convert this Figma flow to React: https://www.figma.com/design/abc123/My-Flow?node-id=1-234
 ```
 
+Or use the skill directly:
+
+```
+/figma-to-react
+```
+
 ## How It Works
 
-### 1. Auto-Detect Configuration
+### 9-Step Workflow
 
-The plugin analyzes your Figma file and project structure:
+| Step | Description |
+|------|-------------|
+| 1. Setup | Install tools, create temp dirs, arm capture hooks |
+| 2. Detect | Scan project for framework, paths, patterns |
+| 3. Confirm | Present config to user for approval |
+| 4. Generate | Process each screen in parallel via sub-agents |
+| 5. Tokens | Import extracted CSS variables into project |
+| 6. Preview | Create `/figma-preview` route for validation |
+| 7. Validate | Screenshot comparison loop with auto-fixes |
+| 8. Rename | Intelligently rename assets from MCP descriptions |
+| 9. Cleanup | Disarm hooks, remove temp files |
+
+### Generation Pipeline
+
+For each screen:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ DETECTED CONFIGURATION                                          │
-├─────────────────────────────────────────────────────────────────┤
-│ Flow name:      plaid-link (from Figma frame name)              │
-│ Output dir:     src/plaid/ (matches src/{feature}/ pattern)     │
-│ Asset dir:      public/plaid-assets/                            │
-│ Dimensions:     390x844 (from Figma frames)                     │
-├─────────────────────────────────────────────────────────────────┤
-│ SCREENS DETECTED (5)                                            │
-├─────────────────────────────────────────────────────────────────┤
-│  1. "01 - Welcome" (1:234)      → WelcomeScreen.tsx             │
-│  2. "02 - Select Bank" (1:567)  → SelectBankScreen.tsx          │
-│  ...                                                            │
-└─────────────────────────────────────────────────────────────────┘
+get_metadata → extract dimensions → save to /tmp/figma-to-react/metadata/
+     ↓
+get_design_context → hook captures response → /tmp/figma-to-react/captures/
+     ↓
+process-figma.sh → extract tokens, download assets, transform code
+     ↓
+fix-collapsed-containers.sh → add explicit dimensions where needed
+     ↓
+eslint --fix → auto-fix ~90% of Tailwind issues
 ```
 
-### 2. Extract & Process Assets
+### Visual Validation Loop
 
-- Calls Figma MCP `get_design_context` for each screen
-- Downloads all assets (SVGs, PNGs, etc.)
-- Deduplicates by content hash (same icon across screens = 1 file)
-- Renames generic names (`img-1.svg` → `arrow-back.svg`)
+```
+capture screenshot → compare to Figma reference → calculate diff %
+     ↓
+≤5% diff? → Done
+     ↓
+>5% diff? → LLM makes targeted fix → loop (max 10 passes)
+     ↓
+No improvement? → Revert, try different approach
+```
 
-### 3. Generate Components
-
-Uses Figma MCP output **verbatim** — the nested divs, absolute positioning, and percentage insets ensure pixel-perfect rendering.
-
-Components are wired up with:
-- **Navigation**: back, next, close handlers
-- **Interactive elements**: inputs, dropdowns, toggles, selectable lists
-- **Animations**: button press states, spinners, screen transitions
-
-### 4. Create Demo Page
-
-Generates a navigable demo with:
-- Screen state management
-- Navigation between screens
-- Container sized to Figma frame dimensions
-
-## Output
+## Output Structure
 
 ```
 src/{flow}/
@@ -101,35 +108,95 @@ src/{flow}/
 public/{flow}-assets/
 ├── logo.svg
 ├── arrow-back.svg
-├── icon-close.svg
 └── ...
+
+src/styles/
+└── figma-tokens.css
 ```
 
-## Animations
+## Scripts
 
-For mobile flows (< 500px width), iOS-like animations are applied:
+| Script | Purpose |
+|--------|---------|
+| `process-figma.sh` | Main processor: tokens, assets, code transform |
+| `extract-tokens.sh` | Parse CSS variables from MCP output |
+| `validate-component.sh` | Orchestrate single validation pass |
+| `validate-visual.sh` | ImageMagick RMSE comparison |
+| `capture-screenshot.ts` | Playwright headless capture |
+| `fix-collapsed-containers.sh` | Add dimensions to collapsing containers |
+| `rename-assets.sh` | Semantic asset naming from descriptions |
 
-| Element | Animation |
-|---------|-----------|
-| Buttons | `active:scale-95` press feedback |
-| Spinners | `animate-spin` |
-| Screen transitions | `cubic-bezier(0.2, 0.9, 0.4, 1)` ~350ms |
+## Hooks
 
-## Example Output
+The plugin uses PostToolUse hooks to capture Figma MCP responses:
+
+| Hook | Trigger | Action |
+|------|---------|--------|
+| `capture-figma-response.sh` | `get_design_context` | Save response, suppress output |
+| `capture-figma-metadata.sh` | `get_metadata` | Extract frame dimensions |
+| `capture-figma-screenshot.sh` | `get_screenshot` | Decode and save image |
+
+Hooks always capture for debugging. Output suppression only activates when the skill is running (saves ~50KB context per screen).
+
+## Key Features
+
+### Content Hash Deduplication
+
+Same icon across multiple screens = one file. Assets are downloaded once and deduplicated by MD5 hash.
+
+### Collapsed Container Detection
+
+Containers with only absolutely-positioned children would collapse. The plugin detects these and adds explicit `h-[Xpx]` dimensions from Figma metadata.
+
+### Root Dimension Hardcoding
+
+Replaces `size-full` on root elements with explicit `w-[390px] h-[844px]` to ensure pixel-perfect sizing regardless of container.
+
+### Intelligent Asset Renaming
+
+Parses MCP component descriptions like `Source: boxicons --- icon, x, close` to rename `asset-abc.svg` → `close-icon.svg`.
+
+## Development
+
+```bash
+pnpm install
+pnpm test:e2e        # Run tests (~10s)
+pnpm test:e2e:watch  # Watch mode
+```
+
+### Test Fixtures
+
+Tests use captured Figma responses from the Onfido Web SDK Community file:
+- Frame 237-2571: Motion / Mobile 3
+- Frame 238-1790: Motion / Mobile 4
+
+### Project Structure
 
 ```
-Created:
-  src/plaid/screens/registry.ts
-  src/plaid/screens/components/WelcomeScreen.tsx
-  src/plaid/screens/components/SelectBankScreen.tsx
-  src/plaid/screens/components/CredentialsScreen.tsx
-  src/plaid/screens/components/SuccessScreen.tsx
-  src/plaid/PlaidDemoPage.tsx
-  public/plaid-assets/*.svg, *.png
-
-Run: pnpm dev
-Visit: http://localhost:5173/plaid
+├── skills/figma-to-react/
+│   ├── SKILL.md              # Skill definition
+│   ├── references/           # Step guides (1-9)
+│   ├── scripts/              # Shell & TS processors
+│   └── hooks/                # PostToolUse hooks
+├── tests/e2e/
+│   ├── fixtures/             # Captured MCP responses
+│   └── *.test.ts             # Test suites
+└── hooks.json                # Hook configuration
 ```
+
+## Troubleshooting
+
+**Hooks not working?**
+- Restart Claude Code after installation
+- Check `hooks.json` exists at project root
+
+**Visual validation failing?**
+- Install ImageMagick: `brew install imagemagick`
+- Ensure dev server is running
+
+**Assets not downloading?**
+- Check Figma MCP authentication
+- Verify asset URLs are accessible
 
 ## License
 

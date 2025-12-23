@@ -1,6 +1,6 @@
 {
   "name": "figma-to-react",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "Convert Figma designs to pixel-perfect React components with Tailwind CSS",
   "private": true,
   "type": "module",
@@ -8,15 +8,13 @@
     "test:e2e": "vitest run --config vitest.config.ts",
     "test:e2e:watch": "vitest --config vitest.config.ts"
   },
-  "dependencies": {
-    "playwright": "^1.49.0"
-  },
   "devDependencies": {
-    "vitest": "^2.1.0",
-    "tsx": "^4.19.0",
-    "fs-extra": "^11.2.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",
-    "typescript": "^5.6.0"
+    "fs-extra": "^11.2.0",
+    "playwright": "^1.57.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
   }
 }

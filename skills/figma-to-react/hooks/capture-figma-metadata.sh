@@ -87,7 +87,32 @@ cat > "$METADATA_FILE" << EOF
 {"nodeId": "$NODE_ID", "width": $WIDTH, "height": $HEIGHT}
 EOF
 
-echo "✓ Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT}" >&2
+# Save full XML for fix-collapsed-containers.sh to use
+XML_FILE="${METADATA_DIR}/${SAFE_NODE_ID}.xml"
+echo "$XML_CONTENT" > "$XML_FILE"
+
+# Extract ALL node dimensions to a JSON map for quick lookup
+# Parse: <frame id="237:2572" ... width="393" height="64">
+# Output: {"237:2572": {"w": 393, "h": 64}, ...}
+DIMENSIONS_FILE="${METADATA_DIR}/${SAFE_NODE_ID}-dimensions.json"
+
+# Use grep to extract all id/width/height from XML elements
+# Match patterns like: id="237:2572" ... width="393" height="64"
+echo "$XML_CONTENT" | grep -oE '<[^>]+ id="[^"]+"[^>]*>' | while read -r line; do
+  id=$(echo "$line" | grep -oE 'id="[^"]+"' | sed 's/id="//;s/"//')
+  w=$(echo "$line" | grep -oE 'width="[0-9.]+"' | grep -oE '[0-9.]+')
+  h=$(echo "$line" | grep -oE 'height="[0-9.]+"' | grep -oE '[0-9.]+')
+  if [ -n "$id" ] && [ -n "$w" ] && [ -n "$h" ]; then
+    # Round to integers
+    w=$(printf "%.0f" "$w")
+    h=$(printf "%.0f" "$h")
+    echo "\"$id\": {\"w\": $w, \"h\": $h}"
+  fi
+done | paste -sd ',' - | sed 's/^/{/;s/$/}/' > "$DIMENSIONS_FILE"
+
+# Count how many dimensions we extracted
+DIM_COUNT=$(grep -c '"w":' "$DIMENSIONS_FILE" 2>/dev/null || echo "0")
+echo "✓ Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT} (+${DIM_COUNT} child nodes)" >&2
 
 # Output JSON for hook system
 echo '{}'
