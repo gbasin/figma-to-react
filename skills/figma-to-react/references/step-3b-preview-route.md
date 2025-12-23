@@ -28,7 +28,7 @@ Use a **separate HTML entry point** to avoid inheriting any App.tsx layout:
    cp $SKILL_DIR/templates/figma-preview-entry.vite.tsx src/pages/figma-preview-entry.tsx
    ```
 
-2. Access via: `http://localhost:5173/figma-preview.html?screen=ComponentName`
+2. Adjust the glob path if components aren't in `src/components/figma/` (see "Adjust Glob/Import Path" below)
 
 **Why separate entry?** This bypasses the main App.tsx entirely. No routes to configure, no layout inheritance.
 
@@ -81,20 +81,32 @@ import(`@/components/figma/${screenName}`)
 // Custom location - update the path accordingly
 ```
 
-## Start Dev Server
+## Start Dev Server (Required)
 
-After creating the preview, start the dev server:
+**IMPORTANT:** The preview won't work without a running dev server.
 
-```bash
-pnpm dev
-# or: npm run dev
-```
+1. Start the dev server:
+   ```bash
+   pnpm dev
+   # or: npm run dev
+   ```
 
-Note the port from output (e.g., `localhost:5173` for Vite, `localhost:3000` for Next.js).
+2. Wait for startup and note the port from output (e.g., `localhost:5173` for Vite, `localhost:3000` for Next.js)
+
+3. Verify the preview works by curling the URL:
+   ```bash
+   # Vite
+   curl -s http://localhost:5173/figma-preview.html | grep "figma-preview-root"
+
+   # Next.js
+   curl -s http://localhost:3000/figma-preview | grep "Figma Preview"
+   ```
+
+   If this returns nothing, the server isn't serving the preview correctly.
 
 ## Tell the User
 
-After starting the server:
+After verifying the server:
 
 **Vite:**
 ```
