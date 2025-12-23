@@ -51,19 +51,20 @@ Or use the skill directly:
 
 ## How It Works
 
-### 9-Step Workflow
+### Workflow
 
 | Step | Description |
 |------|-------------|
 | 1. Setup | Install tools, create temp dirs, arm capture hooks |
 | 2. Detect | Scan project for framework, paths, patterns |
 | 3. Confirm | Present config to user for approval |
+| 3b. Preview | Create `/figma-preview` route with dynamic imports |
 | 4. Generate | Process each screen in parallel via sub-agents |
+| 4b. Dimensions | Validate dimension coverage, prompt for missing |
 | 5. Tokens | Import extracted CSS variables into project |
-| 6. Preview | Create `/figma-preview` route for validation |
-| 7. Validate | Screenshot comparison loop with auto-fixes |
-| 8. Rename | Intelligently rename assets from MCP descriptions |
-| 9. Cleanup | Disarm hooks, remove temp files |
+| 6. Validate | Screenshot comparison loop with auto-fixes |
+| 7. Rename | Intelligently rename assets from MCP descriptions |
+| 8. Cleanup | Disarm hooks, remove temp files |
 
 ### Generation Pipeline
 
@@ -177,7 +178,7 @@ Tests use captured Figma responses from the Onfido Web SDK Community file:
 ```
 ├── skills/figma-to-react/
 │   ├── SKILL.md              # Skill definition
-│   ├── references/           # Step guides (1-9)
+│   ├── references/           # Step guides (1-8, 3b, 4b)
 │   ├── scripts/              # Shell & TS processors
 │   └── hooks/                # PostToolUse hooks
 ├── tests/e2e/

@@ -1,6 +1,5 @@
 {
   "name": "figma-to-react",
-  "version": "0.9.18",
-  "skills": "./skills/",
-  "hooks": "./hooks.json"
+  "version": "0.9.19",
+  "skills": "./skills/"
 }
