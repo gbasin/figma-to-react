@@ -9,11 +9,13 @@
  *   bun capture-screenshot.ts <url> <output.png>
  *
  * Arguments:
- *   url      - URL to capture (e.g., http://localhost:5173/figma-preview?screen=Login)
+ *   url      - URL to capture (format depends on framework):
+ *              Vite: http://localhost:5173/figma-preview.html?screen=Login
+ *              Next.js: http://localhost:3000/figma-preview?screen=Login
  *   output   - Output path for screenshot (e.g., /tmp/rendered-Login.png)
  *
  * Example:
- *   bun capture-screenshot.ts "http://localhost:5173/figma-preview?screen=Login" /tmp/rendered.png
+ *   bun capture-screenshot.ts "http://localhost:5173/figma-preview.html?screen=Login" /tmp/rendered.png
  */
 
 import { chromium } from 'playwright';

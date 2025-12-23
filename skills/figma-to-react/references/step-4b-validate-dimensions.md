@@ -15,7 +15,10 @@ Without dimensions, `fix-collapsed-containers.sh` can't fix elements that collap
 
 ## Use the Preview
 
-The preview route (step 3b) is available at `/figma-preview?screen={ComponentName}`.
+The preview (step 3b) is available at:
+- **Vite**: `/figma-preview.html?screen={ComponentName}`
+- **Next.js**: `/figma-preview?screen={ComponentName}`
+
 When asking the user about missing dimensions, remind them they can check the preview
 to see how elements currently render before deciding on dimensions.
 

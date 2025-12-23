@@ -8,57 +8,82 @@ Create the preview infrastructure BEFORE component generation so users can watch
 - User sees components appear as step 4 generates them
 - During step 4b (dimension validation), user can see the preview while deciding
 
+## Key Principle: Standalone Preview
+
+The preview must render components in isolation, without inheriting any layout chrome (headers, navbars) from the user's app. This ensures pixel-perfect screenshot validation.
+
 ## Framework Detection
 
 From step 2, determine:
-- **Vite/React Router** → use `import.meta.glob`
-- **Next.js App Router** → use dynamic imports + API route
+- **Vite/React Router** → separate HTML entry point
+- **Next.js** → pages/ directory (bypasses App Router layouts)
 
 ## Vite/React Router Implementation
 
-1. Copy template to project:
+Use a **separate HTML entry point** to avoid inheriting any App.tsx layout:
+
+1. Copy templates to project:
    ```bash
-   cp $SKILL_DIR/templates/FigmaPreview.vite.tsx src/pages/FigmaPreview.tsx
+   cp $SKILL_DIR/templates/figma-preview.html figma-preview.html
+   cp $SKILL_DIR/templates/figma-preview-entry.vite.tsx src/pages/figma-preview-entry.tsx
    ```
 
-2. Add route to router config:
-   ```tsx
-   import { FigmaPreview } from './pages/FigmaPreview';
+2. Access via: `http://localhost:5173/figma-preview.html?screen=ComponentName`
 
-   // In your routes:
-   <Route path="/figma-preview" element={<FigmaPreview />} />
-   ```
+**Why separate entry?** This bypasses the main App.tsx entirely. No routes to configure, no layout inheritance.
 
-**Template location:** `$SKILL_DIR/templates/FigmaPreview.vite.tsx`
+**Template locations:**
+- `$SKILL_DIR/templates/figma-preview.html`
+- `$SKILL_DIR/templates/figma-preview-entry.vite.tsx`
 
-## Next.js App Router Implementation
+## Next.js Implementation
 
-1. Copy template to project:
+Use the `pages/` directory to bypass App Router layouts entirely:
+
+1. Copy templates to project:
    ```bash
-   mkdir -p app/figma-preview app/api/figma-screens
-   cp $SKILL_DIR/templates/FigmaPreview.nextjs.tsx app/figma-preview/page.tsx
+   mkdir -p pages app/api/figma-screens
+   cp $SKILL_DIR/templates/figma-preview.nextjs-pages.tsx pages/figma-preview.tsx
    cp $SKILL_DIR/templates/figma-screens-api.nextjs.ts app/api/figma-screens/route.ts
    ```
 
+2. Update the CSS import path in `pages/figma-preview.tsx` if needed:
+   ```tsx
+   import '../app/globals.css'; // Adjust to your global CSS location
+   ```
+
+3. Access via: `http://localhost:3000/figma-preview?screen=ComponentName`
+
+**Why pages/ directory?** Even in App Router projects, pages in `pages/` don't inherit `app/layout.tsx`. No changes to existing app structure needed.
+
 **Template locations:**
-- `$SKILL_DIR/templates/FigmaPreview.nextjs.tsx`
+- `$SKILL_DIR/templates/figma-preview.nextjs-pages.tsx`
 - `$SKILL_DIR/templates/figma-screens-api.nextjs.ts`
 
-## Adjust Glob Path If Needed
+## Adjust Glob/Import Path If Needed
 
-If `componentDir` in config differs from default (`src/components/figma`), update the glob pattern in the preview component:
+If `componentDir` in config differs from default (`src/components/figma`), update the import pattern:
 
+**Vite:**
 ```tsx
-// Default (src/components/figma)
+// Default
 const modules = import.meta.glob('../components/figma/*.tsx');
 
-// If components are in a different location, adjust relative path
+// Custom location
 const modules = import.meta.glob('../../path/to/figma/*.tsx');
+```
+
+**Next.js:**
+```tsx
+// Default
+import(`@/components/figma/${screenName}`)
+
+// Custom location - update the path accordingly
 ```
 
 ## Start Dev Server
 
-After creating the route, start the dev server:
+After creating the preview, start the dev server:
 
 ```bash
 pnpm dev
@@ -71,6 +96,16 @@ Note the port from output (e.g., `localhost:5173` for Vite, `localhost:3000` for
 
 After starting the server:
 
+**Vite:**
+```
+Preview created at /figma-preview.html
+Dev server running at http://localhost:[port]
+
+As components are generated, they will automatically appear in the preview.
+Open http://localhost:[port]/figma-preview.html to watch progress.
+```
+
+**Next.js:**
 ```
 Preview route created at /figma-preview
 Dev server running at http://localhost:[port]

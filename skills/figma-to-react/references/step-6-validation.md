@@ -5,9 +5,16 @@ Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 ## Prerequisites
 
 - Dev server running (started in step 3b)
-- Preview route created (step 3b)
+- Preview created (step 3b)
 - Figma screenshots captured
 - Bun installed (https://bun.sh)
+
+## Preview URL Format
+
+The preview URL depends on framework (from step 3b):
+
+- **Vite**: `http://localhost:{port}/figma-preview.html?screen={ComponentName}`
+- **Next.js**: `http://localhost:{port}/figma-preview?screen={ComponentName}`
 
 ## Script: validate-component.sh
 
@@ -53,10 +60,10 @@ Task(
     - component: "{ComponentName}"
     - componentPath: "{componentPath}"
     - figmaPng: "/tmp/figma-to-react/screenshots/figma-{nodeId}.png"
-    - previewUrl: "{devServerUrl}/figma-preview?screen={ComponentName}"
+    - previewUrl: "{previewUrl}" (see Preview URL Format above)
     - SKILL_DIR: "{skillDir}"
 
-    NOTE: {devServerUrl} is the dev server URL from your dev server (e.g., http://localhost:3000)
+    NOTE: previewUrl format depends on framework - see Preview URL Format section
 
     Track current diff across iterations.
 

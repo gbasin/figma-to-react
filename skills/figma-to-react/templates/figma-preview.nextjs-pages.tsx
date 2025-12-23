@@ -1,11 +1,12 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import '../app/globals.css'; // Adjust path to your global CSS
+import { ComponentType, Suspense, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 
 export default function FigmaPreview() {
-  const params = useSearchParams();
-  const screenName = params.get('screen');
-  const [Component, setComponent] = useState<React.ComponentType | null>(null);
+  const router = useRouter();
+  const screenName = router.query.screen as string | undefined;
+  const [Component, setComponent] = useState<ComponentType | null>(null);
   const [dim, setDim] = useState({ width: 400, height: 800 });
   const [screens, setScreens] = useState<string[]>([]);
 
@@ -29,15 +30,17 @@ export default function FigmaPreview() {
 
   if (!screenName) {
     return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold">Figma Preview</h1>
+      <div style={{ padding: '2rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Figma Preview</h1>
         {screens.length === 0 ? (
-          <p className="mt-4 text-gray-600">No components yet. Run step 4 to generate components.</p>
+          <p style={{ marginTop: '1rem', color: '#666' }}>
+            No components yet. Run step 4 to generate components.
+          </p>
         ) : (
-          <ul className="mt-4 space-y-2">
+          <ul style={{ marginTop: '1rem' }}>
             {screens.map(name => (
-              <li key={name}>
-                <a href={`?screen=${name}`} className="text-blue-600 hover:underline">{name}</a>
+              <li key={name} style={{ marginBottom: '0.5rem' }}>
+                <a href={`?screen=${name}`} style={{ color: '#2563eb' }}>{name}</a>
               </li>
             ))}
           </ul>
@@ -49,8 +52,10 @@ export default function FigmaPreview() {
   if (!Component) return <div>Loading {screenName}...</div>;
 
   return (
-    <div data-figma-component={screenName}
-         style={{ width: dim.width, height: dim.height, overflow: 'hidden' }}>
+    <div
+      data-figma-component={screenName}
+      style={{ width: dim.width, height: dim.height, overflow: 'hidden' }}
+    >
       <Suspense fallback={<div>Loading...</div>}>
         <Component />
       </Suspense>

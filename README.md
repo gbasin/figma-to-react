@@ -58,7 +58,7 @@ Or use the skill directly:
 | 1. Setup | Install tools, create temp dirs, arm capture hooks |
 | 2. Detect | Scan project for framework, paths, patterns |
 | 3. Confirm | Present config to user for approval |
-| 3b. Preview | Create `/figma-preview` route with dynamic imports |
+| 3b. Preview | Create standalone preview (Vite: HTML entry, Next.js: pages/) |
 | 4. Generate | Process each screen in parallel via sub-agents |
 | 4b. Dimensions | Validate dimension coverage, prompt for missing |
 | 5. Tokens | Import extracted CSS variables into project |

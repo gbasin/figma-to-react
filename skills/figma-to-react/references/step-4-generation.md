@@ -2,9 +2,9 @@
 
 Spawn sub-agents to process each screen. Can run in parallel.
 
-> **Preview Available:** The preview route was created in step 3b. As components are
-> generated, they automatically appear at `/figma-preview?screen=ComponentName`.
-> Tell the user they can watch progress there.
+> **Preview Available:** The preview was created in step 3b. As components are
+> generated, they automatically appear in the preview. Tell the user they can watch
+> progress there (Vite: `/figma-preview.html?screen=...`, Next.js: `/figma-preview?screen=...`).
 
 ## For Each Screen
 

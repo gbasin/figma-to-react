@@ -1,9 +1,10 @@
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import '../index.css';
+import { ComponentType, StrictMode, Suspense, useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 
 // Auto-discover all components in the figma directory
 const modules = import.meta.glob<{
-  default?: React.ComponentType;
+  default?: ComponentType;
   figmaDimensions?: { width: number; height: number };
 }>('../components/figma/*.tsx');
 
@@ -14,10 +15,10 @@ for (const [path, loader] of Object.entries(modules)) {
   loaders[name] = loader;
 }
 
-export function FigmaPreview() {
-  const [params] = useSearchParams();
+function FigmaPreview() {
+  const params = new URLSearchParams(window.location.search);
   const screenName = params.get('screen');
-  const [Component, setComponent] = useState<React.ComponentType | null>(null);
+  const [Component, setComponent] = useState<ComponentType | null>(null);
   const [dim, setDim] = useState({ width: 400, height: 800 });
 
   useEffect(() => {
@@ -37,7 +38,9 @@ export function FigmaPreview() {
         ) : (
           <ul>
             {Object.keys(loaders).map(name => (
-              <li key={name}><a href={`?screen=${name}`}>{name}</a></li>
+              <li key={name}>
+                <a href={`?screen=${name}`}>{name}</a>
+              </li>
             ))}
           </ul>
         )}
@@ -48,8 +51,10 @@ export function FigmaPreview() {
   if (!Component) return <div>Loading {screenName}...</div>;
 
   return (
-    <div data-figma-component={screenName}
-         style={{ width: dim.width, height: dim.height, overflow: 'hidden' }}>
+    <div
+      data-figma-component={screenName}
+      style={{ width: dim.width, height: dim.height, overflow: 'hidden' }}
+    >
       <Suspense fallback={<div>Loading...</div>}>
         <Component />
       </Suspense>
@@ -57,4 +62,8 @@ export function FigmaPreview() {
   );
 }
 
-export default FigmaPreview;
+createRoot(document.getElementById('figma-preview-root')!).render(
+  <StrictMode>
+    <FigmaPreview />
+  </StrictMode>
+);
