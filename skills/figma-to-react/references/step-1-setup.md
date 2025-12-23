@@ -37,6 +37,12 @@ The PostToolUse hook watches for Figma MCP calls. When the marker file exists:
 
 Without the marker file, Figma MCP works normally (useful for debugging).
 
+**Recovery files (created in step 3):**
+- `input.txt` - Raw Figma links from user (one per line)
+- `config.json` - Confirmed output paths
+
+These enable recovery if context is compacted during a multi-screen job.
+
 ## Next Step
 
 Mark this step complete. Read step-2-detect-structure.md.

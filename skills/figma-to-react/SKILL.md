@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 0.9.12
+version: 0.9.13
 description: Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project. Optional: eslint-plugin-tailwindcss for auto-fixing MCP output issues.
@@ -34,3 +34,13 @@ For each step:
 4. Mark as `completed` immediately when done
 
 The TodoWrite list persists in context - even when this file falls out of context, the step file names in the todo items tell you what to find.
+
+## Recovery After Compaction
+
+If context is compacted during a multi-screen job, recover state from:
+- `/tmp/figma-to-react/input.txt` - Original Figma links (one per line)
+- `/tmp/figma-to-react/config.json` - Confirmed output paths
+- `/tmp/figma-to-react/metadata/*.json` - Dimensions for processed screens
+- `/tmp/figma-to-react/captures/figma-*.txt` - Which screens were captured
+
+Check which screens still need processing by comparing input.txt against existing files.
