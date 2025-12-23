@@ -81,20 +81,44 @@ RENDERED_SIZE=$(magick identify -format "%wx%h" "$RENDERED_IMG")
 echo "Figma size:    $FIGMA_SIZE" >&2
 echo "Rendered size: $RENDERED_SIZE" >&2
 
-# Copy rendered to output dir
-cp "$RENDERED_IMG" "$RENDERED_COPY"
+# Copy rendered to output dir (skip if same file)
+if [ "$(realpath "$RENDERED_IMG")" != "$(realpath "$RENDERED_COPY" 2>/dev/null)" ]; then
+  cp "$RENDERED_IMG" "$RENDERED_COPY"
+fi
+
+# Extract dimensions
+FIGMA_W=$(echo "$FIGMA_SIZE" | cut -dx -f1)
+FIGMA_H=$(echo "$FIGMA_SIZE" | cut -dx -f2)
+RENDERED_W=$(echo "$RENDERED_SIZE" | cut -dx -f1)
+RENDERED_H=$(echo "$RENDERED_SIZE" | cut -dx -f2)
 
 # Check if sizes match (they should with element-level screenshots)
 if [ "$FIGMA_SIZE" = "$RENDERED_SIZE" ]; then
   echo "Dimensions match: $FIGMA_SIZE (good)" >&2
   COMPARE_IMG="$FIGMA_IMG"
 else
-  echo "WARNING: Dimension mismatch! This may indicate a rendering issue." >&2
-  echo "  Expected: $FIGMA_SIZE (Figma)" >&2
-  echo "  Got:      $RENDERED_SIZE (rendered)" >&2
-  echo "  Resizing Figma to match for comparison..." >&2
-  magick "$FIGMA_IMG" -resize "${RENDERED_SIZE}!" "$RESIZED_FIGMA"
-  COMPARE_IMG="$RESIZED_FIGMA"
+  # Check for fixed multiples (2x, 3x retina)
+  W_RATIO=$((RENDERED_W / FIGMA_W))
+  H_RATIO=$((RENDERED_H / FIGMA_H))
+  W_MOD=$((RENDERED_W % FIGMA_W))
+  H_MOD=$((RENDERED_H % FIGMA_H))
+
+  # >= 2 to exclude 1x (which means sizes match, handled above)
+  if [ "$W_RATIO" = "$H_RATIO" ] && [ "$W_MOD" -eq 0 ] && [ "$H_MOD" -eq 0 ] && [ "$W_RATIO" -ge 2 ]; then
+    echo "Detected ${W_RATIO}x retina scaling" >&2
+    echo "  Figma:    $FIGMA_SIZE (1x)" >&2
+    echo "  Rendered: $RENDERED_SIZE (${W_RATIO}x)" >&2
+    echo "  Upscaling Figma ${W_RATIO}x for comparison..." >&2
+    magick "$FIGMA_IMG" -resize "$((W_RATIO * 100))%" "$RESIZED_FIGMA"
+    COMPARE_IMG="$RESIZED_FIGMA"
+  else
+    echo "WARNING: Dimension mismatch! This may indicate a rendering issue." >&2
+    echo "  Expected: $FIGMA_SIZE (Figma)" >&2
+    echo "  Got:      $RENDERED_SIZE (rendered)" >&2
+    echo "  Resizing Figma to match for comparison..." >&2
+    magick "$FIGMA_IMG" -resize "${RENDERED_SIZE}!" "$RESIZED_FIGMA"
+    COMPARE_IMG="$RESIZED_FIGMA"
+  fi
 fi
 
 # Copy Figma reference once (at component level, not per-pass)
