@@ -49,6 +49,7 @@ error_exit() {
 
 [ ! -f "$FIGMA_PNG" ] && error_exit "Figma screenshot not found: $FIGMA_PNG"
 [ ! -f "$COMPONENT_PATH" ] && error_exit "Component file not found: $COMPONENT_PATH"
+[ -z "$(command -v bun)" ] && error_exit "bun is required for screenshot capture. Install from https://bun.sh"
 
 # Validation directory and state
 VALIDATION_DIR="/tmp/figma-to-react/validation/${COMPONENT}"
@@ -69,8 +70,8 @@ PASS_DIR="${VALIDATION_DIR}/pass-${PASS}"
 mkdir -p "$PASS_DIR"
 RENDERED_PNG="${PASS_DIR}/rendered.png"
 
-# Capture
-npx tsx "${SKILL_DIR}/scripts/capture-screenshot.ts" "$PREVIEW_URL" "$RENDERED_PNG" 2>/dev/null \
+# Capture (bun resolves modules from cwd, unlike tsx which uses script location)
+bun "${SKILL_DIR}/scripts/capture-screenshot.ts" "$PREVIEW_URL" "$RENDERED_PNG" 2>/dev/null \
   || error_exit "Capture failed"
 
 [ ! -f "$RENDERED_PNG" ] && error_exit "Screenshot not created"

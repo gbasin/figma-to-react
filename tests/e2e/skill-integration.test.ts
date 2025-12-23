@@ -110,7 +110,7 @@ describeIf('Figma Integration Tests (requires Figma MCP)', () => {
 
       // Capture screenshot of the page
       execSync(
-        `npx tsx "${captureScript}" "http://localhost:${port}" "${screenshotPath}"`,
+        `bun "${captureScript}" "http://localhost:${port}" "${screenshotPath}"`,
         {
           cwd: TEST_PROJECT_DIR,
           stdio: 'pipe',
@@ -172,7 +172,7 @@ describe('Preview Wrapper Dimension Tests', () => {
 
     // Capture screenshot of the SizeFullTestComponent
     execSync(
-      `npx tsx "${captureScript}" "http://localhost:${port}/figma-preview?screen=SizeFullTestComponent" "${screenshotPath}"`,
+      `bun "${captureScript}" "http://localhost:${port}/figma-preview?screen=SizeFullTestComponent" "${screenshotPath}"`,
       {
         cwd: TEST_PROJECT_DIR,
         stdio: 'pipe',
@@ -223,7 +223,7 @@ describe('Preview Wrapper Dimension Tests', () => {
 
     // Capture screenshot
     execSync(
-      `npx tsx "${captureScript}" "http://localhost:${port}/figma-preview?screen=SizeFullTestComponent" "${screenshotPath}"`,
+      `bun "${captureScript}" "http://localhost:${port}/figma-preview?screen=SizeFullTestComponent" "${screenshotPath}"`,
       {
         cwd: TEST_PROJECT_DIR,
         stdio: 'pipe',

@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env bun
 /**
  * capture-screenshot.ts
  *
@@ -6,14 +6,14 @@
  * Screenshots the [data-figma-component] element at its natural size.
  *
  * Usage:
- *   npx tsx capture-screenshot.ts <url> <output.png>
+ *   bun capture-screenshot.ts <url> <output.png>
  *
  * Arguments:
  *   url      - URL to capture (e.g., http://localhost:5173/figma-preview?screen=Login)
  *   output   - Output path for screenshot (e.g., /tmp/rendered-Login.png)
  *
  * Example:
- *   npx tsx capture-screenshot.ts "http://localhost:5173/figma-preview?screen=Login" /tmp/rendered.png
+ *   bun capture-screenshot.ts "http://localhost:5173/figma-preview?screen=Login" /tmp/rendered.png
  */
 
 import { chromium } from 'playwright';
@@ -22,7 +22,7 @@ const url = process.argv[2];
 const output = process.argv[3];
 
 if (!url || !output) {
-  console.error('Usage: npx tsx capture-screenshot.ts <url> <output.png>');
+  console.error('Usage: bun capture-screenshot.ts <url> <output.png>');
   console.error('');
   console.error('Arguments:');
   console.error('  url      - URL to capture');

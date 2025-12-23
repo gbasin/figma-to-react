@@ -56,6 +56,14 @@ lookup_dimensions() {
   jq -r --arg id "$node_id" '.[$id] // empty | "\(.w)x\(.h)"' "$DIMENSIONS_JSON" 2>/dev/null
 }
 
+# Function to check if dimensions were manually added (vs from Figma MCP)
+# Manual dimensions should aggressively replace relative sizing (w-full, h-auto, etc.)
+# Figma MCP dimensions should preserve relative sizing (trust the design intent)
+is_manual_dimension() {
+  local node_id="$1"
+  jq -e --arg id "$node_id" '.[$id].manual // false' "$DIMENSIONS_JSON" &>/dev/null
+}
+
 # ============================================================================
 # PASS 1: Build component name -> node-id map
 # ============================================================================
@@ -116,18 +124,50 @@ echo "  Found ${#COMPONENT_NODE_IDS[@]} component mappings" >&2
 
 FIXES_MADE=0
 
-# Helper to check if line needs height fix
-needs_height_fix() {
+# Helper to check if line needs height fix (conservative - for Figma MCP dimensions)
+# Excludes elements with relative sizing (h-full, etc.) - trust the design intent
+needs_height_fix_conservative() {
   local line="$1"
-  # Has vertical padding but no explicit height
-  echo "$line" | grep -qE 'py-\[|p-\[' && ! echo "$line" | grep -qE 'h-\[[0-9]+px\]|h-full|size-full|h-\[var'
+  # Has vertical padding but no explicit height (pixel or relative)
+  echo "$line" | grep -qE 'py-\[|p-\[' && ! echo "$line" | grep -qE 'h-\[[0-9]+px\]|h-full|h-auto|h-fit|size-full|h-\[var'
 }
 
-# Helper to check if line needs width fix
-needs_width_fix() {
+# Helper to check if line needs height fix (aggressive - for manual dimensions)
+# Does NOT exclude relative sizing - we may need to replace them
+needs_height_fix_aggressive() {
   local line="$1"
-  # Has horizontal padding but no explicit width
-  echo "$line" | grep -qE 'px-\[|p-\[' && ! echo "$line" | grep -qE 'w-\[[0-9]+px\]|w-full|size-full|w-\[var'
+  # Has vertical padding but no explicit pixel height
+  echo "$line" | grep -qE 'py-\[|p-\[' && ! echo "$line" | grep -qE 'h-\[[0-9]+px\]|size-full|h-\[var'
+}
+
+# Helper to check if line has relative height that should be replaced
+# Includes: h-full, h-auto, h-fit
+has_relative_height() {
+  local line="$1"
+  echo "$line" | grep -qE '(^|[" ])h-(full|auto|fit)[" ]'
+}
+
+# Helper to check if line needs width fix (conservative - for Figma MCP dimensions)
+# Excludes elements with relative sizing (w-full, etc.) - trust the design intent
+needs_width_fix_conservative() {
+  local line="$1"
+  # Has horizontal padding but no explicit width (pixel or relative)
+  echo "$line" | grep -qE 'px-\[|p-\[' && ! echo "$line" | grep -qE 'w-\[[0-9]+px\]|w-full|w-auto|w-fit|size-full|w-\[var'
+}
+
+# Helper to check if line needs width fix (aggressive - for manual dimensions)
+# Does NOT exclude relative sizing - we may need to replace them
+needs_width_fix_aggressive() {
+  local line="$1"
+  # Has horizontal padding but no explicit pixel width
+  echo "$line" | grep -qE 'px-\[|p-\[' && ! echo "$line" | grep -qE 'w-\[[0-9]+px\]|size-full|w-\[var'
+}
+
+# Helper to check if line has relative width that should be replaced
+# Includes: w-full, w-auto, w-fit
+has_relative_width() {
+  local line="$1"
+  echo "$line" | grep -qE '(^|[" ])w-(full|auto|fit)[" ]'
 }
 
 # Helper to check if line has collapse-prone positioning
@@ -166,25 +206,73 @@ while IFS= read -r line || [ -n "$line" ]; do
 
       # Only apply fixes if the line has positioning context
       if has_positioning "$line"; then
+        # Check if this is a manually-added dimension (collapse fix)
+        # Manual = aggressive (replace relative sizing)
+        # Figma MCP = conservative (preserve relative sizing)
+        is_manual=false
+        if is_manual_dimension "$node_id"; then
+          is_manual=true
+        fi
 
         # Fix height
-        if needs_height_fix "$line" && [ "$h" -gt 0 ]; then
-          # Insert h-[Xpx] after className="
-          new_line=$(echo "$modified_line" | perl -pe "s/(className=\")/\${1}h-[${h}px] /")
-          if [ "$new_line" != "$modified_line" ]; then
-            modified_line="$new_line"
-            FIXES_MADE=$((FIXES_MADE + 1))
-            echo "  Fixed height: $node_id -> h-[${h}px]" >&2
+        if [ "$h" -gt 0 ]; then
+          if [ "$is_manual" = true ] && needs_height_fix_aggressive "$line"; then
+            # Manual dimension: aggressively replace relative sizing
+            if has_relative_height "$modified_line"; then
+              old_class=$(echo "$modified_line" | grep -oE '(^|[" ])h-(full|auto|fit)' | sed 's/^[" ]*//' | head -1)
+              new_line=$(echo "$modified_line" | sed -E "s/([\" ])h-(full|auto|fit)([\" ])/\1h-[${h}px]\3/g")
+              if [ "$new_line" != "$modified_line" ]; then
+                modified_line="$new_line"
+                FIXES_MADE=$((FIXES_MADE + 1))
+                echo "  Fixed height: $node_id -> h-[${h}px] (replaced $old_class, manual)" >&2
+              fi
+            else
+              new_line=$(echo "$modified_line" | perl -pe "s/(className=\")/\${1}h-[${h}px] /")
+              if [ "$new_line" != "$modified_line" ]; then
+                modified_line="$new_line"
+                FIXES_MADE=$((FIXES_MADE + 1))
+                echo "  Fixed height: $node_id -> h-[${h}px] (manual)" >&2
+              fi
+            fi
+          elif [ "$is_manual" = false ] && needs_height_fix_conservative "$line"; then
+            # Figma MCP dimension: only add if no relative sizing present
+            new_line=$(echo "$modified_line" | perl -pe "s/(className=\")/\${1}h-[${h}px] /")
+            if [ "$new_line" != "$modified_line" ]; then
+              modified_line="$new_line"
+              FIXES_MADE=$((FIXES_MADE + 1))
+              echo "  Fixed height: $node_id -> h-[${h}px]" >&2
+            fi
           fi
         fi
 
-        # Fix width (only if not already w-full)
-        if needs_width_fix "$line" && [ "$w" -gt 0 ] && ! echo "$line" | grep -qE 'w-full|shrink-0 w-full'; then
-          new_line=$(echo "$modified_line" | perl -pe "s/(className=\")/\${1}w-[${w}px] /")
-          if [ "$new_line" != "$modified_line" ]; then
-            modified_line="$new_line"
-            FIXES_MADE=$((FIXES_MADE + 1))
-            echo "  Fixed width: $node_id -> w-[${w}px]" >&2
+        # Fix width
+        if [ "$w" -gt 0 ]; then
+          if [ "$is_manual" = true ] && needs_width_fix_aggressive "$line"; then
+            # Manual dimension: aggressively replace relative sizing
+            if has_relative_width "$modified_line"; then
+              old_class=$(echo "$modified_line" | grep -oE '(^|[" ])w-(full|auto|fit)' | sed 's/^[" ]*//' | head -1)
+              new_line=$(echo "$modified_line" | sed -E "s/([\" ])w-(full|auto|fit)([\" ])/\1w-[${w}px]\3/g")
+              if [ "$new_line" != "$modified_line" ]; then
+                modified_line="$new_line"
+                FIXES_MADE=$((FIXES_MADE + 1))
+                echo "  Fixed width: $node_id -> w-[${w}px] (replaced $old_class, manual)" >&2
+              fi
+            else
+              new_line=$(echo "$modified_line" | perl -pe "s/(className=\")/\${1}w-[${w}px] /")
+              if [ "$new_line" != "$modified_line" ]; then
+                modified_line="$new_line"
+                FIXES_MADE=$((FIXES_MADE + 1))
+                echo "  Fixed width: $node_id -> w-[${w}px] (manual)" >&2
+              fi
+            fi
+          elif [ "$is_manual" = false ] && needs_width_fix_conservative "$line"; then
+            # Figma MCP dimension: only add if no relative sizing present
+            new_line=$(echo "$modified_line" | perl -pe "s/(className=\")/\${1}w-[${w}px] /")
+            if [ "$new_line" != "$modified_line" ]; then
+              modified_line="$new_line"
+              FIXES_MADE=$((FIXES_MADE + 1))
+              echo "  Fixed width: $node_id -> w-[${w}px]" >&2
+            fi
           fi
         fi
       fi

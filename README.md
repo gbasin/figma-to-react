@@ -158,6 +158,8 @@ Parses MCP component descriptions like `Source: boxicons --- icon, x, close` to 
 
 ## Development
 
+Prereqs: Node 20+, pnpm 9+, and Bun (https://bun.sh) for screenshot capture.
+
 ```bash
 pnpm install
 pnpm test:e2e        # Run tests (~10s)

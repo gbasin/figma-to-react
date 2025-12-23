@@ -20,7 +20,7 @@ describe('fix-collapsed-containers.sh - Collapsed Container Detection', () => {
     await fs.remove(TMP_DIR);
   });
 
-  const runFixer = async (tsx: string, dimensions: Record<string, { w: number; h: number }>): Promise<string> => {
+  const runFixer = async (tsx: string, dimensions: Record<string, { w: number; h: number; manual?: boolean }>): Promise<string> => {
     const tsxFile = path.join(TMP_DIR, 'input.tsx');
     const dimFile = path.join(TMP_DIR, 'dimensions.json');
 
@@ -277,6 +277,143 @@ describe('fix-collapsed-containers.sh - Collapsed Container Detection', () => {
 
       // Verify component mappings were detected
       // (these components use className={className} pattern)
+    });
+  });
+
+  describe('Manual vs Figma MCP Dimensions', () => {
+    it('should NOT replace h-full with Figma MCP dimensions (no manual flag)', async () => {
+      const tsx = `
+        <div className="h-full py-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      // No manual flag = Figma MCP dimension = conservative behavior
+      const dims = { '237:2572': { w: 393, h: 64 } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).toContain('h-full');
+      expect(result).not.toContain('h-[64px]');
+    });
+
+    it('should REPLACE h-full with manual dimensions (manual: true)', async () => {
+      const tsx = `
+        <div className="h-full py-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      // manual: true = manually added dimension = aggressive behavior
+      const dims = { '237:2572': { w: 393, h: 64, manual: true } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).not.toContain('h-full');
+      expect(result).toContain('h-[64px]');
+    });
+
+    it('should NOT replace w-full with Figma MCP dimensions', async () => {
+      const tsx = `
+        <div className="w-full px-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      const dims = { '237:2572': { w: 393, h: 64 } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).toContain('w-full');
+      expect(result).not.toContain('w-[393px]');
+    });
+
+    it('should REPLACE w-full with manual dimensions', async () => {
+      const tsx = `
+        <div className="w-full px-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      const dims = { '237:2572': { w: 393, h: 64, manual: true } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).not.toContain('w-full');
+      expect(result).toContain('w-[393px]');
+    });
+
+    it('should REPLACE h-auto with manual dimensions', async () => {
+      const tsx = `
+        <div className="h-auto py-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      const dims = { '237:2572': { w: 393, h: 64, manual: true } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).not.toContain('h-auto');
+      expect(result).toContain('h-[64px]');
+    });
+
+    it('should REPLACE h-fit with manual dimensions', async () => {
+      const tsx = `
+        <div className="h-fit py-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      const dims = { '237:2572': { w: 393, h: 64, manual: true } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).not.toContain('h-fit');
+      expect(result).toContain('h-[64px]');
+    });
+
+    it('should NOT replace h-auto with Figma MCP dimensions', async () => {
+      const tsx = `
+        <div className="h-auto py-[8px] relative" data-node-id="237:2572">
+          <div className="absolute">Child</div>
+        </div>
+      `;
+      const dims = { '237:2572': { w: 393, h: 64 } };
+
+      const result = await runFixer(tsx, dims);
+      expect(result).toContain('h-auto');
+      expect(result).not.toContain('h-[64px]');
+    });
+
+    it('should handle mixed manual and non-manual dimensions', async () => {
+      const tsx = `
+        <div className="h-full py-[8px] relative" data-node-id="1:1">
+          <div className="absolute">Child 1</div>
+        </div>
+        <div className="h-full py-[8px] relative" data-node-id="1:2">
+          <div className="absolute">Child 2</div>
+        </div>
+      `;
+      const dims = {
+        '1:1': { w: 100, h: 50 },           // Figma MCP - keep h-full
+        '1:2': { w: 100, h: 60, manual: true }, // Manual - replace h-full
+      };
+
+      const result = await runFixer(tsx, dims);
+      // First element: h-full preserved (className comes before data-node-id)
+      expect(result).toMatch(/h-full[^>]*data-node-id="1:1"/s);
+      // Second element: h-full replaced with h-[60px]
+      expect(result).toMatch(/h-\[60px\][^>]*data-node-id="1:2"/s);
+      expect(result).not.toMatch(/h-full[^>]*data-node-id="1:2"/s);
+    });
+
+    it('should add dimensions to element without relative sizing (both modes)', async () => {
+      const tsx = `
+        <div className="py-[8px] relative" data-node-id="1:1">
+          <div className="absolute">Child 1</div>
+        </div>
+        <div className="py-[8px] relative" data-node-id="1:2">
+          <div className="absolute">Child 2</div>
+        </div>
+      `;
+      const dims = {
+        '1:1': { w: 100, h: 50 },           // Figma MCP
+        '1:2': { w: 100, h: 60, manual: true }, // Manual
+      };
+
+      const result = await runFixer(tsx, dims);
+      // Both should get explicit heights added (no relative sizing to preserve)
+      expect(result).toContain('h-[50px]');
+      expect(result).toContain('h-[60px]');
     });
   });
 

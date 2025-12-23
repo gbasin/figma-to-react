@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Convert Figma designs to pixel-perfect React components with Tailwind CSS",
-    "version": "0.9.15"
+    "version": "0.9.16"
   },
   "plugins": [
     {
       "name": "figma-to-react",
       "source": "./",
       "description": "Convert Figma designs to pixel-perfect React components with Tailwind CSS",
-      "version": "0.9.15",
+      "version": "0.9.16",
       "author": {
         "name": "Gary Basin"
       },
