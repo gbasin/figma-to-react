@@ -1,28 +1,30 @@
-# Step 3: Confirm Configuration with User
+# Step 3: Confirm Configuration
 
-Get user approval on output paths before processing.
+Use hardcoded defaults with quick override option.
+
+## Default Paths
+
+```
+Components: src/components/figma/
+Assets:     public/figma-assets/
+Tokens:     src/styles/figma-tokens.css
+URL prefix: /figma-assets
+```
 
 ## Present to User
 
 ```
 Detected: [Framework] + React + Tailwind
 
-Output paths (confirm or edit):
-  Components: src/components/
+Output paths:
+  Components: src/components/figma/
   Assets:     public/figma-assets/
   Tokens:     src/styles/figma-tokens.css
-  URL prefix: /figma-assets
 
-Proceed? [Y/n/edit]
+Proceed with defaults? [Y/edit]
 ```
 
-## If User Wants Changes
-
-Use `AskUserQuestion` to gather custom paths:
-- Component output directory
-- Asset output directory
-- Tokens CSS file location
-- URL prefix for assets in code
+If user types "edit", use `AskUserQuestion` to gather custom paths.
 
 ## Parse Figma URL
 
@@ -50,7 +52,7 @@ Store exactly what the user provided (links or node IDs), one per line.
 ```bash
 cat > /tmp/figma-to-react/config.json << 'EOF'
 {
-  "componentDir": "src/components",
+  "componentDir": "src/components/figma",
   "assetDir": "public/figma-assets",
   "tokensFile": "src/styles/figma-tokens.css",
   "urlPrefix": "/figma-assets"
@@ -60,4 +62,4 @@ EOF
 
 ## Next Step
 
-Mark this step complete. Read step-4-generation.md.
+Mark this step complete. Read step-3b-preview-route.md.

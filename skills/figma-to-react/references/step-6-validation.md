@@ -1,11 +1,11 @@
-# Step 7: Validate Screens
+# Step 6: Validate Screens
 
 Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 
 ## Prerequisites
 
 - Dev server running: `pnpm dev` (note the port from output, e.g., `localhost:3000` or `localhost:5173`)
-- Preview route created (step 6)
+- Preview route created (step 3b)
 - Figma screenshots captured
 - Bun installed (https://bun.sh)
 
@@ -56,7 +56,7 @@ Task(
     - previewUrl: "{devServerUrl}/figma-preview?screen={ComponentName}"
     - SKILL_DIR: "{skillDir}"
 
-    NOTE: {devServerUrl} is the dev server URL detected in step 6 (e.g., http://localhost:3000)
+    NOTE: {devServerUrl} is the dev server URL from your dev server (e.g., http://localhost:3000)
 
     Track current diff across iterations.
 
@@ -93,4 +93,4 @@ Spawn all validation sub-agents simultaneously. Each uses its own preview URL.
 
 ## Next Step
 
-Read step-8-rename-assets.md.
+Read step-7-rename-assets.md.

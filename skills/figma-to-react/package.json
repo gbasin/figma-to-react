@@ -1,0 +1,8 @@
+{
+  "name": "figma-to-react-skill",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.57.0"
+  }
+}

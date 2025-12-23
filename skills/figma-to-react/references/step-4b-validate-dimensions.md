@@ -13,6 +13,12 @@ The MCP metadata may not include dimensions for all node IDs in the generated TS
 
 Without dimensions, `fix-collapsed-containers.sh` can't fix elements that collapse due to absolute-positioned children.
 
+## Use the Preview
+
+The preview route (step 3b) is available at `/figma-preview?screen={ComponentName}`.
+When asking the user about missing dimensions, remind them they can check the preview
+to see how elements currently render before deciding on dimensions.
+
 ## For Each Generated Screen
 
 Run the validation script with the actual node ID from the current conversion:

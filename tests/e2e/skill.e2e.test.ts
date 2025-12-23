@@ -262,12 +262,13 @@ describe('figma-to-react Skill E2E', () => {
         'step-1-setup.md',
         'step-2-detect-structure.md',
         'step-3-confirm-config.md',
+        'step-3b-preview-route.md',
         'step-4-generation.md',
+        'step-4b-validate-dimensions.md',
         'step-5-import-tokens.md',
-        'step-6-preview-route.md',
-        'step-7-validation.md',
-        'step-8-rename-assets.md',
-        'step-9-disarm-hook.md',
+        'step-6-validation.md',
+        'step-7-rename-assets.md',
+        'step-8-disarm-hook.md',
       ];
 
       for (const step of requiredSteps) {

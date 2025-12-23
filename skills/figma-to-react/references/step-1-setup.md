@@ -26,7 +26,7 @@ touch /tmp/figma-to-react/capture-active
 ## What This Does
 
 **Tool installations:**
-- ImageMagick provides the `magick` CLI for image comparison (used in step 7)
+- ImageMagick provides the `magick` CLI for image comparison (used in step 6)
 - Playwright enables headless screenshot capture of rendered components
 
 **Capture hook:**

@@ -1,6 +1,6 @@
 ---
 name: figma-to-react
-version: 0.9.16
+version: 0.9.17
 description: Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 license: MIT
 compatibility: Requires Figma MCP server (mcp__figma__*). React + Tailwind CSS project. Optional: eslint-plugin-tailwindcss for auto-fixing MCP output issues.
@@ -19,13 +19,13 @@ When invoked, create a TodoWrite list with these steps. Use Glob to find each st
 1. Setup - Glob **/step-1-setup.md then Read it
 2. Detect structure - Glob **/step-2-detect-structure.md then Read it
 3. Confirm config - Glob **/step-3-confirm-config.md then Read it
+3b. Create preview route - Glob **/step-3b-preview-route.md then Read it
 4. Generate screens (parallel) - Glob **/step-4-generation.md then Read it
 4b. Validate dimensions - Glob **/step-4b-validate-dimensions.md then Read it
 5. Import tokens - Glob **/step-5-import-tokens.md then Read it
-6. Create preview route - Glob **/step-6-preview-route.md then Read it
-7. Validate screens (parallel) - Glob **/step-7-validation.md then Read it
-8. Rename assets - Glob **/step-8-rename-assets.md then Read it
-9. Disarm hook - Glob **/step-9-disarm-hook.md then Read it
+6. Validate screens (parallel) - Glob **/step-6-validation.md then Read it
+7. Rename assets - Glob **/step-7-rename-assets.md then Read it
+8. Disarm hook - Glob **/step-8-disarm-hook.md then Read it
 ```
 
 For each step:

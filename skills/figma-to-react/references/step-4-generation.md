@@ -2,6 +2,10 @@
 
 Spawn sub-agents to process each screen. Can run in parallel.
 
+> **Preview Available:** The preview route was created in step 3b. As components are
+> generated, they automatically appear at `/figma-preview?screen=ComponentName`.
+> Tell the user they can watch progress there.
+
 ## For Each Screen
 
 Spawn a sub-agent using Task tool:

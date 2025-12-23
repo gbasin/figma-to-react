@@ -21,6 +21,15 @@
 
 set -e
 
+# Cross-platform sed -i (BSD vs GNU)
+sed_i() {
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 INPUT="$1"
 OUTPUT="$2"
 ASSET_DIR="$3"
@@ -226,8 +235,8 @@ while IFS='|' read -r VAR_NAME URL; do
   [ -z "$LOCAL_PATH" ] && continue
 
   # Handle both src={var} and src={ var } patterns
-  sed -i '' "s|src={${VAR_NAME}}|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
-  sed -i '' "s|src={ ${VAR_NAME} }|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
+  sed_i "s|src={${VAR_NAME}}|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
+  sed_i "s|src={ ${VAR_NAME} }|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
 done < "$ASSET_LIST"
 
 # Note: size-full on root element is intentionally preserved.
@@ -244,6 +253,29 @@ if [ -f "$DIMENSIONS_FILE" ] && [ -x "$SCRIPT_DIR/fix-collapsed-containers.sh" ]
   echo "Step 3.5: Fixing collapsed containers..." >&2
   "$SCRIPT_DIR/fix-collapsed-containers.sh" "$TEMP_CODE" "$DIMENSIONS_FILE" > "$TEMP_CODE.fixed"
   mv "$TEMP_CODE.fixed" "$TEMP_CODE"
+fi
+
+# Step 4: Inject dimension export for preview route
+# Components export figmaDimensions so preview can set container size
+if [ -n "$FRAME_WIDTH" ] && [ -n "$FRAME_HEIGHT" ]; then
+  echo "" >&2
+  echo "Step 4: Injecting dimension export..." >&2
+  DIMENSION_EXPORT="export const figmaDimensions = { width: ${FRAME_WIDTH}, height: ${FRAME_HEIGHT} };"
+
+  # Check if file starts with 'use client' (Next.js App Router)
+  # The directive MUST stay on line 1, so inject export after it
+  if head -1 "$TEMP_CODE" | grep -q "^['\"]use client['\"]"; then
+    # Insert after first line (preserving 'use client' at top)
+    sed_i "1a\\
+\\
+${DIMENSION_EXPORT}\\
+" "$TEMP_CODE"
+    echo "  Added after 'use client': $DIMENSION_EXPORT" >&2
+  else
+    # No 'use client' - prepend to file
+    echo -e "${DIMENSION_EXPORT}\n\n$(cat "$TEMP_CODE")" > "$TEMP_CODE"
+    echo "  Added: $DIMENSION_EXPORT" >&2
+  fi
 fi
 
 # Write output

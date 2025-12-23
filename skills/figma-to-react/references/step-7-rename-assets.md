@@ -1,4 +1,4 @@
-# Step 8: Rename Generic Assets (Optional)
+# Step 7: Rename Generic Assets (Optional)
 
 Offer to rename assets with generic names to meaningful ones.
 
@@ -46,4 +46,4 @@ The script handles atomic rename + reference update.
 
 ## Next Step
 
-Read step-9-disarm-hook.md.
+Read step-8-disarm-hook.md.
