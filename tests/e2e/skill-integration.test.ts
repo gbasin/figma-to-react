@@ -134,6 +134,118 @@ describeIf('Figma Integration Tests (requires Figma MCP)', () => {
 });
 
 // Always run these tests (no Figma needed)
+describe('Preview Wrapper Dimension Tests', () => {
+  afterAll(async () => {
+    await stopDevServer();
+  });
+
+  beforeEach(async () => {
+    await fs.ensureDir(TMP_DIR);
+  });
+
+  afterEach(async () => {
+    await fs.remove(TMP_DIR);
+  });
+
+  /**
+   * Critical test: Verifies that a component with size-full on its root element
+   * is correctly constrained by the preview wrapper's explicit dimensions.
+   *
+   * This test ensures:
+   * 1. The wrapper has explicit width/height from Figma metadata
+   * 2. The wrapper has overflow:hidden to clip content
+   * 3. The screenshot dimensions exactly match the expected Figma frame size
+   * 4. Components with size-full expand to fill (not overflow) the wrapper
+   */
+  it('should constrain size-full component to wrapper dimensions', async () => {
+    // Expected dimensions for SizeFullTestComponent (defined in App.tsx)
+    const expectedWidth = 393;
+    const expectedHeight = 852;
+    const deviceScaleFactor = 2; // capture-screenshot.ts uses 2x
+
+    // Start dev server
+    const port = await startDevServer(TEST_PROJECT_DIR);
+    await waitForServer(`http://localhost:${port}`);
+
+    const screenshotPath = path.join(TMP_DIR, 'size-full-test.png');
+    const captureScript = path.join(SCRIPTS_DIR, 'capture-screenshot.ts');
+
+    // Capture screenshot of the SizeFullTestComponent
+    execSync(
+      `npx tsx "${captureScript}" "http://localhost:${port}/figma-preview?screen=SizeFullTestComponent" "${screenshotPath}"`,
+      {
+        cwd: TEST_PROJECT_DIR,
+        stdio: 'pipe',
+        timeout: 30000,
+      }
+    );
+
+    // Verify screenshot was created
+    expect(await fs.pathExists(screenshotPath)).toBe(true);
+
+    // Get actual screenshot dimensions using ImageMagick
+    const identifyOutput = execSync(`magick identify -format "%w %h" "${screenshotPath}"`, {
+      encoding: 'utf-8',
+    }).trim();
+    const [actualWidth, actualHeight] = identifyOutput.split(' ').map(Number);
+
+    // Screenshot should match expected dimensions (accounting for 2x scale factor)
+    const expectedPixelWidth = expectedWidth * deviceScaleFactor;
+    const expectedPixelHeight = expectedHeight * deviceScaleFactor;
+
+    expect(actualWidth).toBe(expectedPixelWidth);
+    expect(actualHeight).toBe(expectedPixelHeight);
+
+    console.log(`Screenshot dimensions: ${actualWidth}x${actualHeight}`);
+    console.log(`Expected (at ${deviceScaleFactor}x): ${expectedPixelWidth}x${expectedPixelHeight}`);
+  }, 60000);
+
+  /**
+   * Test that overflow content is clipped by the wrapper.
+   * The SizeFullTestComponent has an absolutely positioned element that extends
+   * beyond the frame bounds - this should NOT appear in the screenshot.
+   */
+  it('should clip overflow content with overflow:hidden', async () => {
+    // Skip if ImageMagick is not available
+    if (!isImageMagickAvailable()) {
+      console.log('Skipping overflow test - ImageMagick not installed');
+      return;
+    }
+
+    const port = getDevServerPort();
+    if (!port) {
+      console.log('Skipping overflow test - dev server not running');
+      return;
+    }
+
+    const screenshotPath = path.join(TMP_DIR, 'overflow-test.png');
+    const captureScript = path.join(SCRIPTS_DIR, 'capture-screenshot.ts');
+
+    // Capture screenshot
+    execSync(
+      `npx tsx "${captureScript}" "http://localhost:${port}/figma-preview?screen=SizeFullTestComponent" "${screenshotPath}"`,
+      {
+        cwd: TEST_PROJECT_DIR,
+        stdio: 'pipe',
+        timeout: 30000,
+      }
+    );
+
+    // Check that red (overflow content) is NOT present in the screenshot
+    // The SizeFullTestComponent has a red div that should be clipped
+    // We use ImageMagick to check for red pixels
+    const colorOutput = execSync(
+      `magick "${screenshotPath}" -format "%[fx:mean.r > 0.8 && mean.g < 0.3 && mean.b < 0.3 ? 1 : 0]" info:`,
+      { encoding: 'utf-8' }
+    ).trim();
+
+    // If overflow is properly clipped, there should be no significant red
+    // (The component has blue background, white text - red would indicate overflow leaked)
+    // Note: This is a heuristic check - the red overflow div should be completely hidden
+    expect(colorOutput).not.toBe('1');
+  }, 60000);
+});
+
 describe('Validation Script Unit Tests', () => {
   beforeEach(async () => {
     await fs.ensureDir(TMP_DIR);

@@ -230,41 +230,18 @@ while IFS='|' read -r VAR_NAME URL; do
   sed -i '' "s|src={ ${VAR_NAME} }|src=\"${LOCAL_PATH}\"|g" "$TEMP_CODE"
 done < "$ASSET_LIST"
 
-# Step 3.5: Replace size-full with explicit dimensions on root element
-# This ensures the component has fixed dimensions instead of relying on parent container
-if [ -n "$FRAME_WIDTH" ] && [ -n "$FRAME_HEIGHT" ] && [ "$FRAME_WIDTH" != "null" ] && [ "$FRAME_HEIGHT" != "null" ]; then
-  echo "" >&2
-  echo "Step 3.5: Applying root dimensions (${FRAME_WIDTH}x${FRAME_HEIGHT})..." >&2
+# Note: size-full on root element is intentionally preserved.
+# The preview wrapper (FigmaPreview.tsx) constrains components to exact Figma dimensions
+# using inline styles (width, height, overflow:hidden). This allows components to be
+# responsive in production while maintaining pixel-perfect validation screenshots.
+# See: tests/e2e/skill-integration.test.ts "Preview Wrapper Dimension Tests"
 
-  # Convert node ID format: 237-2571 -> 237:2571 for matching data-node-id attribute
-  ROOT_NODE_ID="${NODE_ID//-/:}"
-
-  # Replace size-full with explicit dimensions on the root element
-  # The root element has data-node-id matching the frame ID
-  # Note: className may appear before or after data-node-id in the element
-  # Use perl for reliable multi-line matching with both patterns
-  perl -i -0777 -pe "
-    # Pattern 1: className before data-node-id (most common)
-    s/(className=\"[^\"]*?)\bsize-full\b([^\"]*\"[^>]*?data-node-id=\"${ROOT_NODE_ID}\")/\${1}w-[${FRAME_WIDTH}px] h-[${FRAME_HEIGHT}px]\${2}/sg;
-
-    # Pattern 2: data-node-id before className (preserve trailing classes)
-    s/(data-node-id=\"${ROOT_NODE_ID}\"[^>]*?className=\"[^\"]*?)\bsize-full\b([^\"]*\")/\${1}w-[${FRAME_WIDTH}px] h-[${FRAME_HEIGHT}px]\${2}/sg;
-  " "$TEMP_CODE"
-
-  # Verify the replacement happened (use fgrep to match literal brackets)
-  if grep -Fq "w-[${FRAME_WIDTH}px]" "$TEMP_CODE"; then
-    echo "  ✓ Applied w-[${FRAME_WIDTH}px] h-[${FRAME_HEIGHT}px] to root element" >&2
-  else
-    echo "  ⚠ Root element may not have had size-full class" >&2
-  fi
-fi
-
-# Step 3.6: Fix collapsed containers
+# Step 3.5: Fix collapsed containers
 # Containers with only absolute children collapse to padding-only height
 DIMENSIONS_FILE="/tmp/figma-to-react/metadata/${NODE_ID}-dimensions.json"
 if [ -f "$DIMENSIONS_FILE" ] && [ -x "$SCRIPT_DIR/fix-collapsed-containers.sh" ]; then
   echo "" >&2
-  echo "Step 3.6: Fixing collapsed containers..." >&2
+  echo "Step 3.5: Fixing collapsed containers..." >&2
   "$SCRIPT_DIR/fix-collapsed-containers.sh" "$TEMP_CODE" "$DIMENSIONS_FILE" > "$TEMP_CODE.fixed"
   mv "$TEMP_CODE.fixed" "$TEMP_CODE"
 fi
