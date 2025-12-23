@@ -250,4 +250,177 @@ describe('fix-collapsed-containers.sh - Collapsed Container Detection', () => {
       expect(result).toMatch(/className="h-\[64px\]/);
     });
   });
+
+  describe('Real MCP Capture: Motion Mobile (237:2571)', () => {
+    it('should fix collapsed containers in actual Figma MCP output', async () => {
+      const tsxFile = path.resolve(__dirname, 'fixtures/mcp-captures/figma-237-2571.txt');
+      const dimFile = path.resolve(__dirname, 'fixtures/mcp-captures/237-2571-dimensions.json');
+
+      const result = execSync(`bash "${SCRIPT_PATH}" "${tsxFile}" "${dimFile}"`, {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      // Should map the extracted components
+      // HeadTurnPictogram and MotionFrame have className={className} pattern
+
+      // Navigation Bar (237:2572) should get h-[64px] - inline element with py-[...] relative
+      expect(result).toMatch(/h-\[64px\].*data-node-id="237:2572"/);
+
+      // Other inline collapsed containers should be fixed
+      // 237:2577 has py-[...] relative pattern
+      expect(result).toContain('h-[168px]');
+      expect(result).toContain('w-[148px]');
+
+      // 237:2578 - content area
+      expect(result).toContain('h-[294px]');
+
+      // Verify component mappings were detected
+      // (these components use className={className} pattern)
+    });
+  });
+
+  describe('Component Usage Fixes (Two-Pass)', () => {
+    it('should map component definition to node-id and fix usage site', async () => {
+      const tsx = `function NavigationBar({ className }: { className?: string }) {
+  return (
+    <div data-node-id="237:2572" className={className}>
+      <div className="absolute">child</div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <div>
+      <NavigationBar className="py-[8px] relative px-[12px]" />
+    </div>
+  );
+}`;
+      const dims = { '237:2572': { w: 393, h: 64 } };
+
+      const result = await runFixer(tsx, dims);
+
+      // Component usage should get both h-[64px] and w-[393px]
+      expect(result).toContain('h-[64px]');
+      expect(result).toContain('w-[393px]');
+      // Fix should be applied to the usage line, not the definition
+      expect(result).toMatch(/<NavigationBar className="[^"]*h-\[64px\]/);
+    });
+
+    it('should fix only height when width has w-full at usage site', async () => {
+      const tsx = `function NavigationBar({ className }: { className?: string }) {
+  return (
+    <div data-node-id="237:2572" className={className}>
+      <div className="absolute">child</div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <NavigationBar className="py-[8px] relative w-full" />
+  );
+}`;
+      const dims = { '237:2572': { w: 393, h: 64 } };
+
+      const result = await runFixer(tsx, dims);
+
+      expect(result).toContain('h-[64px]');
+      expect(result).not.toContain('w-[393px]');
+    });
+
+    it('should handle multiple extracted components', async () => {
+      const tsx = `function HeadTurnPictogram({ className }: { className?: string }) {
+  return (
+    <div data-node-id="238:1725" className={className}>
+      <div className="absolute">head</div>
+    </div>
+  );
+}
+
+function MotionFrame({ className }: { className?: string }) {
+  return (
+    <div data-node-id="238:1678" className={className}>
+      <div className="absolute">frame</div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <div>
+      <HeadTurnPictogram className="py-[10px] relative" />
+      <MotionFrame className="px-[20px] relative" />
+    </div>
+  );
+}`;
+      const dims = {
+        '238:1725': { w: 84, h: 104 },
+        '238:1678': { w: 259, h: 366 },
+      };
+
+      const result = await runFixer(tsx, dims);
+
+      // HeadTurnPictogram should get h-[104px] (has py-[10px])
+      expect(result).toMatch(/<HeadTurnPictogram className="[^"]*h-\[104px\]/);
+      // MotionFrame should get w-[259px] (has px-[20px])
+      expect(result).toMatch(/<MotionFrame className="[^"]*w-\[259px\]/);
+    });
+
+    it('should NOT fix component usage without collapse pattern', async () => {
+      const tsx = `function NavigationBar({ className }: { className?: string }) {
+  return (
+    <div data-node-id="237:2572" className={className}>
+      <div className="absolute">child</div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <NavigationBar className="flex items-center" />
+  );
+}`;
+      const dims = { '237:2572': { w: 393, h: 64 } };
+
+      const result = await runFixer(tsx, dims);
+
+      // No padding, no relative/absolute in usage - should not fix
+      expect(result).not.toContain('h-[64px]');
+      expect(result).not.toContain('w-[393px]');
+    });
+
+    it('should handle inline elements AND component usages in same file', async () => {
+      const tsx = `function Header({ className }: { className?: string }) {
+  return (
+    <div data-node-id="100:1" className={className}>
+      <div className="absolute">header content</div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <div>
+      <Header className="py-[8px] relative" />
+      <div className="py-[16px] relative" data-node-id="200:2">
+        <div className="absolute">inline content</div>
+      </div>
+    </div>
+  );
+}`;
+      const dims = {
+        '100:1': { w: 300, h: 50 },
+        '200:2': { w: 400, h: 100 },
+      };
+
+      const result = await runFixer(tsx, dims);
+
+      // Component usage should be fixed
+      expect(result).toMatch(/<Header className="[^"]*h-\[50px\]/);
+      // Inline element should also be fixed
+      expect(result).toMatch(/h-\[100px\].*data-node-id="200:2"/);
+    });
+  });
 });
