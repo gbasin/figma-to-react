@@ -117,8 +117,27 @@ The script outputs JSON with any missing dimensions (example output):
 ## Skip Conditions
 
 - If `critical_missing` is 0, no user interaction needed
-- User can say "skip all" to proceed without fixing
 - Some elements may render correctly despite being flagged (false positives)
+
+## Many Missing Dimensions (>5)
+
+If many elements are flagged, **still ask the user** - don't decide for them:
+
+```
+AskUserQuestion(questions: [
+  {
+    question: "21 collapse-prone elements found. How to proceed?",
+    header: "Dimensions",
+    options: [
+      {label: "Skip all", description: "Proceed to visual validation - fix issues there if any"},
+      {label: "Show me the list", description: "I'll pick which ones to fix"},
+      {label: "Fix common patterns", description: "Auto-fix buttons (48x48), icons (24x24)"}
+    ]
+  }
+])
+```
+
+**Never skip silently.** The user should always make the call.
 
 ## Next Step
 
