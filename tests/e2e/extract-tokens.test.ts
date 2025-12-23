@@ -42,9 +42,20 @@ describe('extract-tokens.sh - Token Extraction', () => {
       expect(result).toContain('--size: 16px;');
     });
 
-    it('should extract value with escaped slashes', async () => {
+    it('should convert escaped slashes to hyphens', async () => {
       const result = await runExtractor('className="gap-[var(--space\\/1, 8px)]"');
-      expect(result).toContain('--space\\/1: 8px;');
+      expect(result).toContain('--space-1: 8px;');
+      expect(result).not.toContain('\\/');
+    });
+
+    it('should convert multiple slashes to hyphens', async () => {
+      const result = await runExtractor('var(--color\\/primary\\/500, #3b82f6)');
+      expect(result).toContain('--color-primary-500: #3b82f6;');
+    });
+
+    it('should convert unescaped slashes to hyphens', async () => {
+      const result = await runExtractor('var(--color/primary/500, #3b82f6)');
+      expect(result).toContain('--color-primary-500: #3b82f6;');
     });
 
     it('should extract color name', async () => {
@@ -168,14 +179,16 @@ describe('extract-tokens.sh - Token Extraction', () => {
       expect(result).toContain(':root {');
       expect(result).toContain('}');
 
-      // Verify known tokens from this fixture
-      expect(result).toContain('--background\\/overlay');
-      expect(result).toContain('--background\\/surface-alt');
-      expect(result).toContain('--border-radius\\/full');
-      expect(result).toContain('--border-radius\\/large');
-      expect(result).toContain('--space\\/1');
-      expect(result).toContain('--space\\/2');
-      expect(result).toContain('--content\\/always-light');
+      // Verify known tokens from this fixture (slashes converted to hyphens)
+      expect(result).toContain('--background-overlay');
+      expect(result).toContain('--background-surface-alt');
+      expect(result).toContain('--border-radius-full');
+      expect(result).toContain('--border-radius-large');
+      expect(result).toContain('--space-1');
+      expect(result).toContain('--space-2');
+      expect(result).toContain('--content-always-light');
+      // Verify no escaped slashes remain
+      expect(result).not.toContain('\\/');
     });
 
     it('should extract tokens from Frame 238-1790 fixture', async () => {
@@ -188,6 +201,82 @@ describe('extract-tokens.sh - Token Extraction', () => {
 
       expect(result).toContain(':root {');
       expect(result).toContain('--');
+    });
+  });
+});
+
+describe('process-figma.sh - Slash to Hyphen in TSX', () => {
+  const PROCESS_SCRIPT = path.resolve(__dirname, '../../skills/figma-to-react/scripts/process-figma.sh');
+
+  beforeEach(async () => {
+    await fs.ensureDir(TMP_DIR);
+    await fs.ensureDir(path.join(TMP_DIR, 'assets'));
+  });
+
+  afterEach(async () => {
+    await fs.remove(TMP_DIR);
+  });
+
+  it('should convert escaped slashes to hyphens in var() references', async () => {
+    const inputFile = path.join(TMP_DIR, 'figma-test-123.txt');
+    const outputFile = path.join(TMP_DIR, 'Output.tsx');
+    const assetsDir = path.join(TMP_DIR, 'assets');
+
+    // Input with escaped slashes in var() calls
+    const inputContent = `
+export const Component = () => {
+  return (
+    <div
+      className="bg-[var(--background\\/surface-alt, #fff)]"
+      style={{
+        gap: 'var(--space\\/1, 8px)',
+        borderRadius: 'var(--border-radius\\/large, 12px)',
+        color: 'var(--color\\/primary\\/500, #3b82f6)'
+      }}
+    >
+      Hello
+    </div>
+  );
+};
+`;
+    await fs.writeFile(inputFile, inputContent);
+
+    execSync(`bash "${PROCESS_SCRIPT}" "${inputFile}" "${outputFile}" "${assetsDir}" "/assets"`, {
+      stdio: 'pipe',
+    });
+
+    const result = await fs.readFile(outputFile, 'utf-8');
+
+    // All escaped slashes should be converted to hyphens
+    expect(result).toContain('--background-surface-alt');
+    expect(result).toContain('--space-1');
+    expect(result).toContain('--border-radius-large');
+    expect(result).toContain('--color-primary-500');
+    // No escaped slashes should remain
+    expect(result).not.toContain('\\/');
+  });
+
+  it('should handle real fixture with slash tokens in TSX output', async () => {
+    const fixtureInput = path.join(FIXTURES_DIR, '237-2571/design-context.txt');
+    const outputFile = path.join(TMP_DIR, 'MotionMobile.tsx');
+    const assetsDir = path.join(TMP_DIR, 'assets');
+
+    execSync(`bash "${PROCESS_SCRIPT}" "${fixtureInput}" "${outputFile}" "${assetsDir}" "/assets"`, {
+      stdio: 'pipe',
+    });
+
+    const result = await fs.readFile(outputFile, 'utf-8');
+
+    // Verify NO escaped slashes remain (primary assertion)
+    expect(result).not.toContain('\\/');
+
+    // Count CSS variables to ensure we tested something
+    const varMatches = result.match(/--[\w-]+/g) || [];
+    expect(varMatches.length).toBeGreaterThan(0);
+
+    // Verify all CSS variables use hyphens (no slashes)
+    varMatches.forEach((varName) => {
+      expect(varName).not.toMatch(/[\/\\]/);
     });
   });
 });

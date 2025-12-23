@@ -225,6 +225,12 @@ cp "$INPUT" "$TEMP_CODE"
 # These markers indicate where Figma's guidance text begins
 perl -i -0777 -pe 's/(SUPER CRITICAL:|Node ids have been added|These styles are contained|Component descriptions:|IMPORTANT: After you call this tool).*//s' "$TEMP_CODE"
 
+# Convert escaped slashes to hyphens in CSS variable references
+# e.g., var(--color\/primary\/500, #fff) → var(--color-primary-500, #fff)
+# This matches the token name cleanup in extract-tokens.sh
+# Pattern matches CSS var names (--xxx) and replaces all slashes with hyphens in one pass
+perl -i -pe 's/--[^\s,)]+/my $s=$&; $s=~s{\\?\/}{-}g; $s/ge' "$TEMP_CODE"
+
 # Remove asset const declarations (const imgXxx = "https://...")
 perl -i -pe 's/^const\s+\w+\s*=\s*"https?:\/\/(?:www\.figma\.com\/api\/mcp\/asset|localhost:\d+\/assets)\/[^"]+";?\s*\n?//gm' "$TEMP_CODE"
 

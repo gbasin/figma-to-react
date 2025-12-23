@@ -67,8 +67,9 @@ perl -e '
       # Trim leading/trailing whitespace from fallback
       $fallback =~ s/^\s+//;
       $fallback =~ s/\s+$//;
-      # Fix double-escaped slashes (\\/ -> \/)
-      $name =~ s/\\\\\//\\\//g;
+      # Convert escaped slashes to hyphens for cleaner CSS variable names
+      # e.g., --color\/primary\/500 → --color-primary-500
+      $name =~ s/\\?\//\-/g;
       print "$name|$fallback\n";
     }
   }
