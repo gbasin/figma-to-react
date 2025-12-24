@@ -276,7 +276,7 @@ export const Component = () => {
 
     // Verify all CSS variables use hyphens (no slashes)
     varMatches.forEach((varName) => {
-      expect(varName).not.toMatch(/[\/\\]/);
+      expect(varName).not.toMatch(/[/\\]/);
     });
   });
 });

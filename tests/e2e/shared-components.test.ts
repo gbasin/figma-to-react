@@ -462,7 +462,6 @@ describe('Shared + Validate Integration', () => {
     // Step 4: Run validate-dimensions-coverage.sh
     const validateScript = path.join(SCRIPTS_DIR, 'validate-dimensions-coverage.sh');
     let validateResult: string;
-    let exitCode = 0;
 
     try {
       validateResult = execSync(
@@ -472,7 +471,6 @@ describe('Shared + Validate Integration', () => {
     } catch (error: any) {
       // Script exits with 1 when there are missing dimensions
       validateResult = error.stdout || '';
-      exitCode = error.status || 1;
     }
 
     // Parse the JSON output

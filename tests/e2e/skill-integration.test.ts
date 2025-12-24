@@ -13,7 +13,6 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import path from 'path';
-import os from 'os';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { execSync } from 'child_process';
@@ -33,7 +32,7 @@ const SCRIPTS_DIR = path.join(SKILL_DIR, 'scripts');
 const TMP_DIR = getTmpDir();
 
 // Test Figma frames from the Onfido Web SDK Community file
-const TEST_FRAMES = {
+const _TEST_FRAMES = {
   frame1: {
     url: 'https://www.figma.com/design/d2P4yPAlmQtwwU6Ccq9BR1/Onfido-Web-SDK--Community-?node-id=237-2571&m=dev',
     nodeId: '237-2571',

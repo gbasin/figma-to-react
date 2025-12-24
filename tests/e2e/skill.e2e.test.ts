@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { execSync } from 'child_process';
 import { parseNodeIdFromUrl } from './utils/skill-runner';
-import { startDevServer, stopDevServer, getDevServerPort } from './utils/dev-server';
+import { startDevServer, stopDevServer } from './utils/dev-server';
 import { TEST_PROJECT_DIR } from './setup';
 
 const __filename = fileURLToPath(import.meta.url);

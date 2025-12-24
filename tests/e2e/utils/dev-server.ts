@@ -8,7 +8,7 @@ let devServerPort: number | null = null;
  * Finds an available port
  */
 async function findAvailablePort(startPort: number = 5173): Promise<number> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const server = createServer();
     server.unref();
     server.on('error', () => {
