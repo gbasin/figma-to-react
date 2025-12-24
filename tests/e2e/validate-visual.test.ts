@@ -4,12 +4,16 @@ import os from 'os';
 import fs from 'fs-extra';
 import { execSync, spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { isImageMagickAvailable } from './utils/cleanup';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const SCRIPT_PATH = path.resolve(__dirname, '../../skills/figma-to-react/scripts/validate-visual.sh');
 const TMP_DIR = path.join(os.tmpdir(), 'figma-to-react-validate-visual-tests');
+
+// Check if ImageMagick is available for tests that require it
+const hasImageMagick = isImageMagickAvailable();
 
 // Helper to create a solid color test image with ImageMagick
 const createTestImage = (filepath: string, width: number, height: number, color: string = 'blue') => {
@@ -36,7 +40,7 @@ const runValidation = (
   };
 };
 
-describe('validate-visual.sh - Visual Validation', () => {
+describe.skipIf(!hasImageMagick)('validate-visual.sh - Visual Validation', () => {
   beforeEach(async () => {
     await fs.ensureDir(TMP_DIR);
     // Clean up any previous validation output

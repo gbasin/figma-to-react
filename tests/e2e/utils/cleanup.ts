@@ -209,3 +209,21 @@ export function isImageMagickAvailable(): boolean {
     return false;
   }
 }
+
+/**
+ * Checks if Playwright browsers are installed
+ */
+export function isPlaywrightAvailable(): boolean {
+  try {
+    // Check if chromium browser is available by running a quick check
+    execSync('npx playwright --version', { stdio: 'ignore' });
+    // Also check if browsers are actually installed
+    const result = execSync('ls ~/.cache/ms-playwright/chromium-* 2>/dev/null || echo "not found"', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    });
+    return !result.includes('not found');
+  } catch {
+    return false;
+  }
+}
