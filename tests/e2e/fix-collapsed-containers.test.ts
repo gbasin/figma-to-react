@@ -560,4 +560,146 @@ export default function App() {
       expect(result).toMatch(/h-\[100px\].*data-node-id="200:2"/);
     });
   });
+
+  describe('Batch Processing', () => {
+    const runBatchFixer = (args: string): { exitCode: number } => {
+      try {
+        execSync(`bash "${SCRIPT_PATH}" ${args}`, {
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          cwd: TMP_DIR,
+        });
+        return { exitCode: 0 };
+      } catch (err: any) {
+        return { exitCode: err.status || 1 };
+      }
+    };
+
+    describe('Multiple pairs mode (--pair)', () => {
+      it('should process multiple --pair arguments', async () => {
+        const tsx1 = `<div className="py-[8px] relative" data-node-id="1:1"><div className="absolute">Child</div></div>`;
+        const tsx2 = `<div className="px-[8px] relative" data-node-id="2:2"><div className="absolute">Child</div></div>`;
+
+        const file1 = path.join(TMP_DIR, 'Component1.tsx');
+        const file2 = path.join(TMP_DIR, 'Component2.tsx');
+        const dims1 = path.join(TMP_DIR, '1-1-dimensions.json');
+        const dims2 = path.join(TMP_DIR, '2-2-dimensions.json');
+
+        await fs.writeFile(file1, tsx1);
+        await fs.writeFile(file2, tsx2);
+        await fs.writeFile(dims1, JSON.stringify({ '1:1': { w: 100, h: 50 } }));
+        await fs.writeFile(dims2, JSON.stringify({ '2:2': { w: 200, h: 100 } }));
+
+        runBatchFixer(`--pair "${file1}" "${dims1}" --pair "${file2}" "${dims2}"`);
+
+        const result1 = await fs.readFile(file1, 'utf-8');
+        const result2 = await fs.readFile(file2, 'utf-8');
+
+        expect(result1).toContain('h-[50px]');
+        expect(result2).toContain('w-[200px]');
+      });
+
+      it('should fix each pair in-place', async () => {
+        const tsx = `<div className="py-[8px] relative" data-node-id="1:1"><div className="absolute">Child</div></div>`;
+        const file = path.join(TMP_DIR, 'Component.tsx');
+        const dims = path.join(TMP_DIR, 'dimensions.json');
+
+        await fs.writeFile(file, tsx);
+        await fs.writeFile(dims, JSON.stringify({ '1:1': { w: 100, h: 50 } }));
+
+        const originalContent = tsx;
+        runBatchFixer(`--pair "${file}" "${dims}"`);
+
+        const result = await fs.readFile(file, 'utf-8');
+        expect(result).not.toBe(originalContent);
+        expect(result).toContain('h-[50px]');
+      });
+
+      it('should fail if tsx file not found', async () => {
+        const dims = path.join(TMP_DIR, 'dimensions.json');
+        await fs.writeFile(dims, JSON.stringify({}));
+
+        const { exitCode } = runBatchFixer(`--pair "${TMP_DIR}/nonexistent.tsx" "${dims}"`);
+        expect(exitCode).toBe(1);
+      });
+    });
+
+    describe('Directory mode', () => {
+      it('should process all tsx/dimensions pairs in directories', async () => {
+        const tsxDir = path.join(TMP_DIR, 'components');
+        const dimsDir = path.join(TMP_DIR, 'metadata');
+        await fs.ensureDir(tsxDir);
+        await fs.ensureDir(dimsDir);
+
+        // Component that references node 237:2571
+        const tsx1 = `<div className="py-[8px] relative" data-node-id="237:2571"><div className="absolute">Child</div></div>`;
+        // Component that references node 237:2416
+        const tsx2 = `<div className="px-[8px] relative" data-node-id="237:2416"><div className="absolute">Child</div></div>`;
+
+        await fs.writeFile(path.join(tsxDir, 'Screen1.tsx'), tsx1);
+        await fs.writeFile(path.join(tsxDir, 'Screen2.tsx'), tsx2);
+        await fs.writeFile(path.join(dimsDir, '237-2571-dimensions.json'), JSON.stringify({ '237:2571': { w: 393, h: 64 } }));
+        await fs.writeFile(path.join(dimsDir, '237-2416-dimensions.json'), JSON.stringify({ '237:2416': { w: 200, h: 50 } }));
+
+        runBatchFixer(`"${tsxDir}" "${dimsDir}"`);
+
+        const result1 = await fs.readFile(path.join(tsxDir, 'Screen1.tsx'), 'utf-8');
+        const result2 = await fs.readFile(path.join(tsxDir, 'Screen2.tsx'), 'utf-8');
+
+        expect(result1).toContain('h-[64px]');
+        expect(result2).toContain('w-[200px]');
+      });
+
+      it('should auto-match by nodeId pattern', async () => {
+        const tsxDir = path.join(TMP_DIR, 'components');
+        const dimsDir = path.join(TMP_DIR, 'metadata');
+        await fs.ensureDir(tsxDir);
+        await fs.ensureDir(dimsDir);
+
+        // TSX with specific node ID
+        const tsx = `<div className="p-[8px] relative" data-node-id="2006:2038"><div className="absolute">Child</div></div>`;
+        await fs.writeFile(path.join(tsxDir, 'PersonaScreen1.tsx'), tsx);
+
+        // Matching dimensions file (node ID 2006:2038 -> filename 2006-2038-dimensions.json)
+        await fs.writeFile(path.join(dimsDir, '2006-2038-dimensions.json'), JSON.stringify({ '2006:2038': { w: 300, h: 400 } }));
+
+        runBatchFixer(`"${tsxDir}" "${dimsDir}"`);
+
+        const result = await fs.readFile(path.join(tsxDir, 'PersonaScreen1.tsx'), 'utf-8');
+        expect(result).toContain('h-[400px]');
+        expect(result).toContain('w-[300px]');
+      });
+
+      it('should skip unmatched files with warning', async () => {
+        const tsxDir = path.join(TMP_DIR, 'components');
+        const dimsDir = path.join(TMP_DIR, 'metadata');
+        await fs.ensureDir(tsxDir);
+        await fs.ensureDir(dimsDir);
+
+        // TSX with node ID that has no matching dimensions file
+        const tsx = `<div className="py-[8px] relative" data-node-id="999:999"><div className="absolute">Child</div></div>`;
+        await fs.writeFile(path.join(tsxDir, 'Unmatched.tsx'), tsx);
+
+        // Dimensions for different node ID
+        await fs.writeFile(path.join(dimsDir, '1-1-dimensions.json'), JSON.stringify({ '1:1': { w: 100, h: 50 } }));
+
+        const { exitCode } = runBatchFixer(`"${tsxDir}" "${dimsDir}"`);
+
+        // Should complete (exit 0) but file should be unchanged
+        expect(exitCode).toBe(0);
+        const result = await fs.readFile(path.join(tsxDir, 'Unmatched.tsx'), 'utf-8');
+        expect(result).toBe(tsx); // Unchanged
+      });
+    });
+
+    describe('Backward compatibility', () => {
+      it('should still output to stdout with single file pair', async () => {
+        const tsx = `<div className="py-[8px] relative" data-node-id="1:1"><div className="absolute">Child</div></div>`;
+        const dims = { '1:1': { w: 100, h: 50 } };
+
+        const result = await runFixer(tsx, dims);
+        expect(result).toContain('h-[50px]');
+      });
+    });
+  });
 });

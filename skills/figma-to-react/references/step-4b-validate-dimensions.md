@@ -71,6 +71,29 @@ $SKILL_DIR/scripts/validate-dimensions-coverage.sh \
 
 Replace `{nodeId}` with the actual node ID (e.g., `237-2571`).
 
+### Batch Processing (Multi-Screen)
+
+For multi-screen conversions, validate all files at once using directory mode:
+
+```bash
+# Validate all captures against all metadata files
+$SKILL_DIR/scripts/validate-dimensions-coverage.sh \
+  /tmp/figma-to-react/captures/ \
+  /tmp/figma-to-react/metadata/
+```
+
+Or specify multiple files explicitly:
+
+```bash
+# Validate specific screens
+$SKILL_DIR/scripts/validate-dimensions-coverage.sh \
+  /tmp/figma-to-react/captures/figma-237-2571.txt \
+  /tmp/figma-to-react/captures/figma-237-2416.txt \
+  /tmp/figma-to-react/metadata/
+```
+
+The script auto-matches capture files to dimension files by node ID (e.g., `figma-237-2571.txt` → `237-2571-dimensions.json`).
+
 The script outputs JSON with any missing dimensions (example output):
 
 ```json
@@ -137,15 +160,32 @@ The script outputs JSON with any missing dimensions (example output):
    ```
    Replace `{nodeId}`, `{element-id}`, `{width}`, and `{height}` with the actual values.
 
-   **For shared components (multi-screen):** Apply to ALL instances across ALL screen JSONs:
+   ### Batch Adding Dimensions
+
+   **Multiple IDs to single file (same dimensions):**
    ```bash
-   # If "exit button" (definition 2708:1961) is 48x48, apply to both screens:
+   # Add 393x48 to multiple button IDs in one file
    $SKILL_DIR/scripts/add-missing-dimensions.sh \
-     /tmp/figma-to-react/metadata/237-2416-dimensions.json \
-     "I237:2417;2708:1961" 48 48
-   $SKILL_DIR/scripts/add-missing-dimensions.sh \
-     /tmp/figma-to-react/metadata/237-2571-dimensions.json \
-     "I237:2572;2708:1961" 48 48
+     /tmp/figma-to-react/metadata/2006-2030-dimensions.json \
+     393 48 \
+     "I2006:2037;2189:5232" "I2006:2037;2190:6255" "I2006:2037;2189:5226;661:724"
+   ```
+
+   **Multiple files (same dimensions):**
+   ```bash
+   # Add 393x48 to IDs across multiple files
+   $SKILL_DIR/scripts/add-missing-dimensions.sh 393 48 \
+     --file /tmp/figma-to-react/metadata/2006-2062-dimensions.json "I2006:2073;2603:5160" "I2006:2073;2603:5161" \
+     --file /tmp/figma-to-react/metadata/2006-2075-dimensions.json "I2006:2086;2603:5160" "I2006:2086;2603:5161" \
+     --file /tmp/figma-to-react/metadata/237-2416-dimensions.json "I237:2428;2603:5160"
+   ```
+
+   **For shared components (multi-screen):** Apply to ALL instances across ALL screen JSONs using batch mode:
+   ```bash
+   # If "exit button" (definition 2708:1961) is 48x48, apply to both screens in one call:
+   $SKILL_DIR/scripts/add-missing-dimensions.sh 48 48 \
+     --file /tmp/figma-to-react/metadata/237-2416-dimensions.json "I237:2417;2708:1961" \
+     --file /tmp/figma-to-react/metadata/237-2571-dimensions.json "I237:2572;2708:1961"
    ```
 
    **Note:** Manually-added dimensions get a `manual: true` flag in the JSON. This tells
@@ -163,6 +203,27 @@ The script outputs JSON with any missing dimensions (example output):
      > {componentPath}.tmp && mv {componentPath}.tmp {componentPath}
    ```
    Replace `{componentPath}` and `{nodeId}` with the actual values from the current conversion.
+
+   ### Batch Fixing Collapsed Containers
+
+   **Directory mode (auto-match files by node ID):**
+   ```bash
+   # Process all tsx files in output/ with matching dimensions in metadata/
+   $SKILL_DIR/scripts/fix-collapsed-containers.sh \
+     /path/to/output/ \
+     /tmp/figma-to-react/metadata/
+   ```
+   Files are matched by finding the node ID in the tsx content (e.g., `PersonaScreen1.tsx` with `data-node-id="2006:2038"` matches `2006-2038-dimensions.json`).
+
+   **Multiple pairs mode:**
+   ```bash
+   # Fix multiple specific file pairs
+   $SKILL_DIR/scripts/fix-collapsed-containers.sh \
+     --pair /path/to/PersonaScreen1.tsx /tmp/figma-to-react/metadata/2006-2038-dimensions.json \
+     --pair /path/to/PersonaScreen2.tsx /tmp/figma-to-react/metadata/2006-2062-dimensions.json \
+     --pair /path/to/PersonaScreen3.tsx /tmp/figma-to-react/metadata/2006-2075-dimensions.json
+   ```
+   Batch modes fix files **in-place** (no stdout redirection needed).
 
 ## Skip Conditions
 
