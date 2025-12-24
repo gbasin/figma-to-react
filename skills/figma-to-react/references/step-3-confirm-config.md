@@ -48,17 +48,28 @@ EOF
 ```
 Store exactly what the user provided (links or node IDs), one per line.
 
-**2. Save confirmed config** (use actual paths confirmed above, not these examples):
+**2. Save confirmed config** (use actual values from current job, not these examples):
+
 ```bash
+# EXAMPLE ONLY - replace with actual values:
 cat > /tmp/figma-to-react/config.json << 'EOF'
 {
   "componentDir": "src/components/figma",
   "assetDir": "public/figma-assets",
   "tokensFile": "src/styles/figma-tokens.css",
-  "urlPrefix": "/figma-assets"
+  "urlPrefix": "/figma-assets",
+  "screens": ["237:2571", "237:2572"],
+  "screenNames": {
+    "237:2571": "LoginScreen",
+    "237:2572": "HomeScreen"
+  }
 }
 EOF
 ```
+
+**IMPORTANT:** The `screens` and `screenNames` fields are required for status.sh to track parallel progress.
+- `screens`: Array of all nodeIds from the user's Figma links
+- `screenNames`: Map from nodeId to component name you'll generate
 
 ## Next Step
 

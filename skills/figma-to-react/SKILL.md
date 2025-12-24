@@ -13,35 +13,52 @@ Convert Figma designs to pixel-perfect React components with Tailwind CSS.
 
 ## Workflow
 
-When invoked, create a TodoWrite list with these steps. Use Glob to find each step file:
+The workflow is a **status-driven loop**. Always check status before and after each step:
 
 ```
-1. Setup - Glob **/step-1-setup.md then Read it
-2. Detect structure - Glob **/step-2-detect-structure.md then Read it
-3. Confirm config - Glob **/step-3-confirm-config.md then Read it
-3b. Create preview route - Glob **/step-3b-preview-route.md then Read it
-4. Generate screens (parallel) - Glob **/step-4-generation.md then Read it
-4b. Validate dimensions - Glob **/step-4b-validate-dimensions.md then Read it
-5. Import tokens - Glob **/step-5-import-tokens.md then Read it
-6. Validate screens (parallel) - Glob **/step-6-validation.md then Read it
-7. Rename assets - Glob **/step-7-rename-assets.md then Read it
-8. Disarm hook - Glob **/step-8-disarm-hook.md then Read it
+LOOP:
+  1. Run: $SKILL_DIR/scripts/status.sh
+  2. Read the step file for current_step (e.g., step-4b-validate-dimensions.md)
+  3. Execute that step's instructions
+  4. Go to step 1 (until step 8 complete)
 ```
 
-For each step:
-1. Mark it as `in_progress` in TodoWrite
-2. Use Glob to find the step file, then Read it
-3. Execute the instructions
-4. Mark as `completed` immediately when done
+### Step Reference
 
-The TodoWrite list persists in context - even when this file falls out of context, the step file names in the todo items tell you what to find.
+Create a TodoWrite list with these steps (Glob to find each file):
+
+```
+1. Setup - step-1-setup.md
+2. Detect structure - step-2-detect-structure.md
+3. Confirm config - step-3-confirm-config.md
+3b. Create preview route - step-3b-preview-route.md
+4. Generate screens (parallel) - step-4-generation.md
+4b. Validate dimensions - step-4b-validate-dimensions.md
+5. Import tokens - step-5-import-tokens.md
+6. Validate screens (parallel) - step-6-validation.md
+7. Rename assets - step-7-rename-assets.md
+8. Disarm hook - step-8-disarm-hook.md
+```
+
+### Pre-flight Checks
+
+Each step file has a pre-flight check. If status.sh says you're on step 4b but you're trying to execute step 5:
+1. **STOP** - don't execute step 5
+2. Update TodoWrite to uncheck wrongly-completed steps
+3. Read the correct step file (step 4b)
+
+This prevents skipping steps, which was a common failure mode.
 
 ## Recovery After Compaction
 
-If context is compacted during a multi-screen job, recover state from:
-- `/tmp/figma-to-react/input.txt` - Original Figma links (one per line)
-- `/tmp/figma-to-react/config.json` - Confirmed output paths
-- `/tmp/figma-to-react/metadata/*.json` - Dimensions for processed screens
-- `/tmp/figma-to-react/captures/figma-*.txt` - Which screens were captured
+If context is compacted, run `$SKILL_DIR/scripts/status.sh` to see exactly where you are.
+The script infers state from /tmp files - no context needed.
 
-Check which screens still need processing by comparing input.txt against existing files.
+**State files used by status.sh:**
+- `/tmp/figma-to-react/capture-active` - Skill is active
+- `/tmp/figma-to-react/config.json` - Config with screens/screenNames mapping
+- `/tmp/figma-to-react/steps/4b/*.json` - Dimension validation results
+- `/tmp/figma-to-react/steps/4b/user-decisions.json` - User decisions on missing dims
+- `/tmp/figma-to-react/steps/5/complete.json` - Token import done
+- `/tmp/figma-to-react/validation/*/result.json` - Visual validation results
+- `/tmp/figma-to-react/steps/7/complete.json` - Asset rename done

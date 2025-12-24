@@ -4,6 +4,14 @@ Check that all collapse-prone elements have dimensions in the metadata. Prompt u
 
 > **Note:** All code blocks in this document are **examples only**. Use the actual node IDs, file paths, and element names from the current conversion at runtime.
 
+## Pre-flight Check
+
+```bash
+$SKILL_DIR/scripts/status.sh --check 4b
+```
+
+If this fails, it prints the correct step. Uncheck wrongly-completed TodoWrite items and read that step file instead.
+
 ## Why This Step
 
 The MCP metadata may not include dimensions for all node IDs in the generated TSX, especially:
@@ -60,16 +68,21 @@ to see how elements currently render before deciding on dimensions.
 
 ## For Each Generated Screen
 
-Run the validation script with the actual node ID from the current conversion:
+Run the validation script and **save output** for status.sh tracking:
 
 ```bash
-SKILL_DIR=$(dirname "$(dirname "$0")")
+mkdir -p /tmp/figma-to-react/steps/4b
+
+# For each screen, save validation output
 $SKILL_DIR/scripts/validate-dimensions-coverage.sh \
   /tmp/figma-to-react/captures/figma-{nodeId}.txt \
-  /tmp/figma-to-react/metadata/{nodeId}-dimensions.json
+  /tmp/figma-to-react/metadata/{nodeId}-dimensions.json \
+  > /tmp/figma-to-react/steps/4b/{nodeId}.json
 ```
 
 Replace `{nodeId}` with the actual node ID (e.g., `237-2571`).
+
+**IMPORTANT:** The saved JSON is used by status.sh to track partial completion.
 
 ### Batch Processing (Multi-Screen)
 
@@ -249,6 +262,52 @@ AskUserQuestion(questions: [
 ```
 
 **Never skip silently.** The user should always make the call.
+
+## Save User Decisions
+
+After asking the user about ALL missing dimensions, save their decisions:
+
+```bash
+# EXAMPLE STRUCTURE - use actual IDs and decisions from current job:
+cat > /tmp/figma-to-react/steps/4b/user-decisions.json << EOF
+{
+  "timestamp": "$(date -Iseconds)",
+  "total_missing": ${TOTAL_MISSING},
+  "addressed_ids": [
+    "${ID_1}",
+    "${ID_2}",
+    "${ID_3}"
+  ],
+  "decisions": [
+    {"id": "${ID_1}", "action": "48x48"},
+    {"id": "${ID_2}", "action": "skip"},
+    {"id": "${ID_3}", "action": "48x48"}
+  ]
+}
+EOF
+```
+
+Replace `${...}` placeholders with actual values from the validation output and user responses.
+
+**CRITICAL:** `addressed_ids` must include ALL IDs from ALL validation JSONs.
+- If 10 missing dimensions were found across all screens, all 10 must appear in `addressed_ids`
+- If you only ask about some, status.sh will detect incomplete and bounce you back
+- "skip" counts as addressed - the user made a decision
+
+### Partial Completion Recovery
+
+If status.sh says you're still on step 4b after you thought you completed it:
+1. Read the `next_action` field - it tells you how many remain
+2. Compute remaining IDs:
+   ```bash
+   # Get all missing IDs from validation JSONs
+   jq -s '[.[].missing[].id]' /tmp/figma-to-react/steps/4b/*.json
+   # Get already addressed IDs
+   jq '.addressed_ids' /tmp/figma-to-react/steps/4b/user-decisions.json
+   # Ask user about the difference
+   ```
+3. Ask user about remaining IDs
+4. Append to user-decisions.json
 
 ## Next Step
 

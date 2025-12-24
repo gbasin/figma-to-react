@@ -2,6 +2,14 @@
 
 Spawn sub-agents to process each screen. Can run in parallel.
 
+## Pre-flight Check
+
+```bash
+$SKILL_DIR/scripts/status.sh --check 4
+```
+
+If this fails, it prints the correct step. Uncheck wrongly-completed TodoWrite items and read that step file instead.
+
 > **Preview Available:** The preview was created in step 3b. As components are
 > generated, they automatically appear in the preview. Tell the user they can watch
 > progress there (Vite: `/figma-preview.html?screen=...`, Next.js: `/figma-preview?screen=...`).
@@ -81,10 +89,6 @@ Task(
 
     6. Check for remaining issues:
        bun oxlint {componentPath}
-
-       Review any warnings that couldn't be auto-fixed:
-       - Invalid classes (e.g., object-50%-50% → object-center)
-       - Context-dependent fixes (overflow-clip vs text-clip)
 
        Fix these manually based on the component's intent.
 

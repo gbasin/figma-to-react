@@ -2,6 +2,14 @@
 
 Clean up and verify the workflow completed successfully.
 
+## Pre-flight Check
+
+```bash
+$SKILL_DIR/scripts/status.sh --check 8
+```
+
+If this fails, it prints the correct step. Uncheck wrongly-completed TodoWrite items and read that step file instead.
+
 ## Disarm the Hook
 
 ```bash

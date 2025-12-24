@@ -2,6 +2,14 @@
 
 Offer to rename assets with generic names to meaningful ones.
 
+## Pre-flight Check
+
+```bash
+$SKILL_DIR/scripts/status.sh --check 7
+```
+
+If this fails, it prints the correct step. Uncheck wrongly-completed TodoWrite items and read that step file instead.
+
 ## Check for Generic Names
 
 Look for assets like:
@@ -52,6 +60,15 @@ $SKILL_DIR/scripts/rename-assets.sh \
 The script has two phases:
 1. **Rename**: Parses MCP output for component descriptions, renames `asset-*.svg` to meaningful names
 2. **Dedup**: Merges identical assets (normalizes SVG ids before comparing), keeps shortest/best name
+
+## Mark Complete
+
+After renaming (or if no generic assets found), save completion marker:
+
+```bash
+mkdir -p /tmp/figma-to-react/steps/7
+echo '{"complete": true}' > /tmp/figma-to-react/steps/7/complete.json
+```
 
 ## Next Step
 

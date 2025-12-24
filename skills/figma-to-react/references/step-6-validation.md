@@ -2,6 +2,14 @@
 
 Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 
+## Pre-flight Check
+
+```bash
+$SKILL_DIR/scripts/status.sh --check 6
+```
+
+If this fails, it prints the correct step. Uncheck wrongly-completed TodoWrite items and read that step file instead.
+
 ## Prerequisites
 
 - Dev server running (started in step 3b)
@@ -97,6 +105,23 @@ Task(
 ## Run in Parallel
 
 Spawn all validation sub-agents simultaneously. Each uses its own preview URL.
+
+## Save Results
+
+Each validation must save its final result for status.sh tracking:
+
+```bash
+# The validate-component.sh script outputs JSON. Save it:
+mkdir -p /tmp/figma-to-react/validation/{ComponentName}
+
+$SKILL_DIR/scripts/validate-component.sh \
+  "{ComponentName}" "{figmaPng}" "{previewUrl}" "{componentPath}" $PREV_DIFF \
+  | tee /tmp/figma-to-react/validation/{ComponentName}/result.json
+```
+
+Or let the sub-agent redirect stdout to result.json after the final pass.
+
+**Note:** status.sh checks for `result.json` with status = `success`, `good_enough`, or `max_passes` to determine completion.
 
 ## Next Step
 
