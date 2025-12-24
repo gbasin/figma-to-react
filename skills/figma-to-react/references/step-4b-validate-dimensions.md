@@ -165,7 +165,9 @@ The script outputs JSON with any missing dimensions (example output):
    - Always include "Skip" option
    - Include "Let me check Figma" if unsure what to suggest
 
-3. **For each non-skipped dimension**, run (substitute actual values):
+3. **Save decisions to disk** before applying - see [Save User Decisions](#save-user-decisions) below.
+
+4. **For each non-skipped dimension**, run (substitute actual values):
    ```bash
    $SKILL_DIR/scripts/add-missing-dimensions.sh \
      /tmp/figma-to-react/metadata/{nodeId}-dimensions.json \
@@ -208,7 +210,7 @@ The script outputs JSON with any missing dimensions (example output):
    Dimensions from Figma MCP (without the flag) use **conservative** behavior that preserves
    relative sizing classes, trusting the original design intent.
 
-4. **Re-run fix-collapsed-containers.sh** if any dimensions were added (substitute actual paths):
+5. **Re-run fix-collapsed-containers.sh** if any dimensions were added (substitute actual paths):
    ```bash
    $SKILL_DIR/scripts/fix-collapsed-containers.sh \
      {componentPath} \
@@ -265,7 +267,10 @@ AskUserQuestion(questions: [
 
 ## Save User Decisions
 
-After asking the user about ALL missing dimensions, save their decisions:
+Save decisions to disk **before** applying them. This protects against compaction—if
+context is summarized between asking and applying, specific dimension values would be lost.
+Since `add-missing-dimensions.sh` is idempotent, recovery just means re-applying all
+non-skip decisions from the saved file.
 
 ```bash
 # EXAMPLE STRUCTURE - use actual IDs and decisions from current job:
@@ -279,9 +284,9 @@ cat > /tmp/figma-to-react/steps/4b/user-decisions.json << EOF
     "${ID_3}"
   ],
   "decisions": [
-    {"id": "${ID_1}", "action": "48x48"},
+    {"id": "${ID_1}", "action": "48x48", "width": 48, "height": 48},
     {"id": "${ID_2}", "action": "skip"},
-    {"id": "${ID_3}", "action": "48x48"}
+    {"id": "${ID_3}", "action": "48x48", "width": 48, "height": 48}
   ]
 }
 EOF
@@ -289,25 +294,20 @@ EOF
 
 Replace `${...}` placeholders with actual values from the validation output and user responses.
 
-**CRITICAL:** `addressed_ids` must include ALL IDs from ALL validation JSONs.
-- If 10 missing dimensions were found across all screens, all 10 must appear in `addressed_ids`
+`addressed_ids` must include ALL IDs from ALL validation JSONs:
+- If 10 missing dimensions were found across all screens, all 10 must appear
 - If you only ask about some, status.sh will detect incomplete and bounce you back
-- "skip" counts as addressed - the user made a decision
+- "skip" counts as addressed
 
-### Partial Completion Recovery
+### Partial Completion / Recovery
 
-If status.sh says you're still on step 4b after you thought you completed it:
-1. Read the `next_action` field - it tells you how many remain
-2. Compute remaining IDs:
-   ```bash
-   # Get all missing IDs from validation JSONs
-   jq -s '[.[].missing[].id]' /tmp/figma-to-react/steps/4b/*.json
-   # Get already addressed IDs
-   jq '.addressed_ids' /tmp/figma-to-react/steps/4b/user-decisions.json
-   # Ask user about the difference
-   ```
-3. Ask user about remaining IDs
-4. Append to user-decisions.json
+If resuming after compaction, check `user-decisions.json` first. If it exists, re-apply
+all non-skip decisions (idempotent). If not, re-ask the user.
+
+If status.sh says you're still on step 4b:
+1. Read `next_action` field for remaining count
+2. Diff validation JSONs against `addressed_ids` to find remaining IDs
+3. Ask user about remaining, append to user-decisions.json
 
 ## Next Step
 
