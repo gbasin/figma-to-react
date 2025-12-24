@@ -191,10 +191,10 @@ export async function installTestProjectDeps(testProjectPath: string): Promise<v
  */
 export async function installPlaywright(testProjectPath: string): Promise<void> {
   try {
-    execSync('npx playwright --version', { cwd: testProjectPath, stdio: 'ignore' });
+    execSync('bunx playwright --version', { cwd: testProjectPath, stdio: 'ignore' });
   } catch {
     console.log('Installing Playwright chromium...');
-    execSync('npx playwright install chromium', { cwd: testProjectPath, stdio: 'inherit' });
+    execSync('bunx playwright install chromium', { cwd: testProjectPath, stdio: 'inherit' });
   }
 }
 
@@ -216,7 +216,7 @@ export function isImageMagickAvailable(): boolean {
 export function isPlaywrightAvailable(): boolean {
   try {
     // Check if chromium browser is available by running a quick check
-    execSync('npx playwright --version', { stdio: 'ignore' });
+    execSync('bunx playwright --version', { stdio: 'ignore' });
     // Also check if browsers are actually installed
     const result = execSync('ls ~/.cache/ms-playwright/chromium-* 2>/dev/null || echo "not found"', {
       encoding: 'utf-8',

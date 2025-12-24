@@ -10,7 +10,7 @@ command -v bun >/dev/null || brew install oven-sh/bun/bun
 brew install imagemagick
 
 # Playwright for screenshot capture, oxlint for fast linting
-pnpm add -D playwright oxlint && npx playwright install chromium
+pnpm add -D playwright oxlint && bunx playwright install chromium
 ```
 
 ## Arm the Capture Hook

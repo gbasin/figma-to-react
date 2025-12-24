@@ -31,7 +31,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: bunx playwright install chromium --with-deps
 
       - name: Run tests
         run: pnpm test:e2e
