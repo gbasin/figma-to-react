@@ -1,0 +1,101 @@
+const imgFaceExamples = "https://www.figma.com/api/mcp/asset/4210f591-b806-49de-86eb-908c2245e4ab";
+const imgShapes = "https://www.figma.com/api/mcp/asset/b3207462-cc27-4d08-8fbd-27ddb02dbe27";
+const img = "https://www.figma.com/api/mcp/asset/0dfcd1db-315d-4ce6-bb03-bf857d05f7d5";
+const img1 = "https://www.figma.com/api/mcp/asset/7347b334-5e35-4f77-a11a-fc249cc68f47";
+const img2 = "https://www.figma.com/api/mcp/asset/70cef585-f060-417e-a39e-0ea0e5a7e3c1";
+const img3 = "https://www.figma.com/api/mcp/asset/7989e6d8-d173-4454-a0d3-306f574dd245";
+const img4 = "https://www.figma.com/api/mcp/asset/2beb73b5-cd85-4885-a365-737aa03cf1b1";
+
+function MotionInitialFrame({ className }: { className?: string }) {
+  return (
+    <div className={className} data-name="Motion initial frame" data-node-id="237:2494">
+      <div className="h-[378px] relative shrink-0 w-[267px]" data-name="Shapes" data-node-id="237:2495">
+        <div className="absolute inset-[-5.82%_-8.24%]">
+          <img alt="" className="block max-w-none size-full" src={imgShapes} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MotionMobile() {
+  return (
+    <div className="bg-[var(--background\/surface-alt,#636670)] content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center overflow-clip p-[var(--space\/none,0px)] relative rounded-[var(--border-radius\/large,8px)] size-full" data-name="Motion / Mobile 2" data-node-id="237:2416">
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex gap-[var(--space\/1,8px)] isolate items-start px-[var(--space\/1_5,12px)] py-[var(--space\/1,8px)] relative shrink-0 w-full z-[6]" data-name="Navigation Bar" data-node-id="237:2417">
+        <div className="absolute content-stretch flex flex-col h-[48px] items-center justify-center overflow-clip right-[12px] rounded-[var(--border-radius\/medium,4px)] top-1/2 translate-y-[-50%] z-[2]" data-name="exit button" data-node-id="I237:2417;2708:1961">
+          <div className="content-stretch flex flex-[1_0_0] flex-col gap-[var(--space\/1,0px)] items-center justify-center min-h-px min-w-px overflow-clip p-[var(--space\/1_5,12px)] relative rounded-[var(--border-radius\/medium,4px)] shrink-0 w-full" data-name="padding" data-node-id="I237:2417;2708:1961;2026:14620">
+            <div className="overflow-clip relative shrink-0 size-[24px]" data-name="icon" data-node-id="I237:2417;2708:1961;2026:14620;632:805">
+              <div className="absolute inset-[26.43%_26.64%_26.43%_26.22%]" data-name="base" data-node-id="I237:2417;2708:1961;2026:14620;632:805;8:1866">
+                <div className="absolute inset-0" style={{ "--fill-0": "rgba(247, 249, 250, 1)" } as React.CSSProperties}>
+                  <img alt="" className="block max-w-none size-full" src={img} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute content-stretch flex flex-col h-[48px] items-center justify-center left-[12px] overflow-clip rounded-[var(--border-radius\/medium,4px)] top-1/2 translate-y-[-50%] z-[1]" data-name="back button" data-node-id="I237:2417;2708:1962">
+          <div className="content-stretch flex flex-[1_0_0] flex-col gap-[var(--space\/1,0px)] items-center justify-center min-h-px min-w-px overflow-clip p-[var(--space\/1_5,12px)] relative rounded-[var(--border-radius\/medium,4px)] shrink-0 w-full" data-name="padding" data-node-id="I237:2417;2708:1962;2026:14620">
+            <div className="overflow-clip relative shrink-0 size-[24px]" data-name="icon" data-node-id="I237:2417;2708:1962;2026:14620;632:805">
+              <div className="absolute inset-[17.89%_12.5%_17.89%_10.77%]" data-name="base" data-node-id="I237:2417;2708:1962;2026:14620;632:805;8:2124">
+                <div className="absolute inset-0" style={{ "--fill-0": "rgba(247, 249, 250, 1)" } as React.CSSProperties}>
+                  <img alt="" className="block max-w-none size-full" src={img1} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="content-stretch flex flex-[1_0_0] flex-col gap-[var(--space\/2,16px)] items-center min-h-px min-w-px overflow-clip pb-[var(--space\/1,8px)] pt-[var(--space\/none,0px)] px-[var(--space\/2,16px)] relative shrink-0 w-full z-[4]" data-name="Capture frame" data-node-id="237:2420">
+        <MotionInitialFrame className="content-stretch flex flex-[1_0_0] items-center justify-center min-h-px min-w-px p-[var(--space\/8,64px)] relative shrink-0" />
+        <div className="absolute bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex gap-[var(--space\/1,8px)] items-start left-[calc(50%+0.5px)] px-[var(--space\/2,16px)] py-[var(--space\/1,8px)] rounded-[var(--border-radius\/full,1000px)] top-1/2 translate-x-[-50%] translate-y-[-50%]" data-name="Capture Chip" data-node-id="237:2422">
+          <p className="font-['Lota_Grotesque_Alt_1:Regular',sans-serif] leading-[24px] not-italic relative shrink-0 text-[16px] text-[color:var(--content\/always-light,#f7f9fa)] text-center" data-node-id="I237:2422;2552:4141">
+            Move closer
+          </p>
+        </div>
+      </div>
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/2,0px)] items-center overflow-clip px-[var(--space\/2,16px)] py-[var(--space\/1,8px)] relative shrink-0 w-full z-[3]" data-name="Instructions" data-node-id="237:2423">
+        <div className="content-stretch flex flex-col gap-[var(--space\/1,8px)] items-center p-[var(--space\/none,0px)] relative shrink-0 w-full" data-name="text" data-node-id="237:2424">
+          <p className="font-['Lota_Grotesque_Alt_1:Regular',sans-serif] leading-[24px] not-italic relative shrink-0 text-[16px] text-[color:var(--content\/always-light,#f7f9fa)] text-center w-full whitespace-pre-wrap" data-node-id="237:2426">
+            Position your face in the frame
+          </p>
+        </div>
+      </div>
+      <div className="bg-[var(--background\/overlay,rgba(0,0,0,0.8))] content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center justify-end min-w-[320px] overflow-clip px-[var(--space\/3,24px)] py-[var(--space\/none,0px)] relative shrink-0 w-full z-[2]" data-name="Button Dock Capture" data-node-id="237:2428">
+        <div className="content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center px-[var(--space\/none,0px)] py-[var(--space\/2,16px)] relative shrink-0 w-full z-[2]" data-name="buttons" data-node-id="I237:2428;2603:5160">
+          <div className="content-stretch flex flex-col gap-[var(--space\/1,8px)] isolate items-center min-w-[272px] p-[var(--space\/none,0px)] shrink-0 w-full z-[1]" data-name="button group" data-node-id="I237:2428;2603:5161" />
+        </div>
+        <div className="content-stretch flex flex-col gap-[var(--space\/none,0px)] isolate items-center justify-center p-[var(--space\/none,0px)] relative shrink-0 w-full z-[1]" data-name="footer" data-node-id="I237:2428;2603:5165">
+          <div className="h-[32px] relative shrink-0 w-[144px] z-[1]" data-name="watermark" data-node-id="I237:2428;2603:5166">
+            <div className="absolute h-[15.038px] left-[calc(50%+30px)] top-[calc(50%-0.48px)] translate-x-[-50%] translate-y-[-50%] w-[66px]" data-name="/ 01 Onfido logo / onfido-logo" data-node-id="I237:2428;2603:5166;14:333">
+              <div className="absolute inset-[0_-0.57%_20%_30.68%]" data-name="/ 01 Onfido logo / sub-elements / onfido-wordmark" data-node-id="I237:2428;2603:5166;14:333;14:253">
+                <div className="absolute inset-[0_0.81%_0_0]" data-name="onfido" data-node-id="I237:2428;2603:5166;14:333;14:253;14:275">
+                  <div className="absolute inset-0" style={{ "--fill-0": "rgba(180, 186, 197, 1)" } as React.CSSProperties}>
+                    <img alt="" className="block max-w-none size-full" src={img2} />
+                  </div>
+                </div>
+              </div>
+              <div className="absolute inset-[0_77.27%_0_0]" data-name="/ 01 Onfido logo / sub-elements / onfido-brandmark" data-node-id="I237:2428;2603:5166;14:333;14:254">
+                <div className="absolute inset-[32.06%_23.81%_0.21%_23.4%]" data-name="Union" data-node-id="I237:2428;2603:5166;14:333;14:254;14:285">
+                  <div className="absolute inset-0" style={{ "--fill-0": "rgba(180, 186, 197, 1)" } as React.CSSProperties}>
+                    <img alt="" className="block max-w-none size-full" src={img3} />
+                  </div>
+                </div>
+                <div className="absolute inset-[0_0_23.4%_0]" data-name="Union" data-node-id="I237:2428;2603:5166;14:333;14:254;14:288">
+                  <div className="absolute inset-0" style={{ "--fill-0": "rgba(180, 186, 197, 1)" } as React.CSSProperties}>
+                    <img alt="" className="block max-w-none size-full" src={img4} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="absolute flex flex-col font-['Lota_Grotesque_Alt_1:SemiBold',sans-serif] h-[10px] justify-center leading-[0] left-[calc(50%-63px)] not-italic text-[10px] text-[color:var(--content\/secondary,#b4bac5)] top-1/2 tracking-[0.2px] translate-y-[-50%] w-[55px]" data-node-id="I237:2428;2603:5166;14:334">
+              <p className="leading-[24px] whitespace-pre-wrap">Powered by</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="absolute blur-[20px] filter h-[854px] left-[calc(50%+0.5px)] top-1/2 translate-x-[-50%] translate-y-[-50%] w-[534px] z-[1]" data-name="face-examples" data-node-id="237:2429">
+        <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgFaceExamples} />
+      </div>
+    </div>
+  );
+}

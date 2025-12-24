@@ -353,8 +353,8 @@ describe('Step File References', () => {
     expect(content).toContain('/figma-preview');
   });
 
-  it('step-4c-validate-dimensions.md should mention using preview', async () => {
-    const stepPath = path.join(SKILL_DIR, 'references', 'step-4c-validate-dimensions.md');
+  it('step-4b-validate-dimensions.md should mention using preview', async () => {
+    const stepPath = path.join(SKILL_DIR, 'references', 'step-4b-validate-dimensions.md');
     expect(await fs.pathExists(stepPath)).toBe(true);
 
     const content = await fs.readFile(stepPath, 'utf-8');

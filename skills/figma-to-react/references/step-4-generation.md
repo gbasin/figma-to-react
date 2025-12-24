@@ -112,4 +112,4 @@ Dimensions are stored in `/tmp/figma-to-react/metadata/{ComponentName}.json` for
 
 ## Next Step
 
-Mark this step complete. Read step-5-import-tokens.md.
+Mark this step complete. Read step-4b-validate-dimensions.md.

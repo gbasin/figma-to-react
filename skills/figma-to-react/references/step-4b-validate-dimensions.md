@@ -1,4 +1,4 @@
-# Step 4c: Validate Dimension Coverage
+# Step 4b: Validate Dimension Coverage
 
 Check that all collapse-prone elements have dimensions in the metadata. Prompt user for any missing values.
 
@@ -12,6 +12,42 @@ The MCP metadata may not include dimensions for all node IDs in the generated TS
 - Deeply nested frames
 
 Without dimensions, `fix-collapsed-containers.sh` can't fix elements that collapse due to absolute-positioned children.
+
+## Multi-Screen: Detect Shared Components First
+
+When converting **2+ screens**, run shared component detection BEFORE asking about any dimensions:
+
+```bash
+bun $SKILL_DIR/scripts/find-shared-components.ts \
+  /tmp/figma-to-react/captures/figma-*.txt
+```
+
+**Output example:**
+```json
+{
+  "shared": [
+    {
+      "definitionId": "2708:1961",
+      "name": "exit button",
+      "instances": [
+        {"instanceId": "I237:2417;2708:1961", "screen": "237:2416"},
+        {"instanceId": "I237:2572;2708:1961", "screen": "237:2571"}
+      ]
+    }
+  ],
+  "total_shared": 15
+}
+```
+
+Save this output. When handling missing dimensions below:
+- **Shared components** → ask ONCE, apply to ALL instances across ALL screen JSONs
+- **Screen-specific** → ask and apply per-screen as normal
+
+To check if a missing element is shared:
+1. Extract definition ID from instance ID (last segment after `;`)
+2. Check if that definition ID is in the shared list
+
+**Skip this section for single-screen conversions.**
 
 ## Use the Preview
 
@@ -100,6 +136,17 @@ The script outputs JSON with any missing dimensions (example output):
      "{element-id}" {width} {height}
    ```
    Replace `{nodeId}`, `{element-id}`, `{width}`, and `{height}` with the actual values.
+
+   **For shared components (multi-screen):** Apply to ALL instances across ALL screen JSONs:
+   ```bash
+   # If "exit button" (definition 2708:1961) is 48x48, apply to both screens:
+   $SKILL_DIR/scripts/add-missing-dimensions.sh \
+     /tmp/figma-to-react/metadata/237-2416-dimensions.json \
+     "I237:2417;2708:1961" 48 48
+   $SKILL_DIR/scripts/add-missing-dimensions.sh \
+     /tmp/figma-to-react/metadata/237-2571-dimensions.json \
+     "I237:2572;2708:1961" 48 48
+   ```
 
    **Note:** Manually-added dimensions get a `manual: true` flag in the JSON. This tells
    `fix-collapsed-containers.sh` to **aggressively replace** relative sizing classes
