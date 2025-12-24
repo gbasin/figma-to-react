@@ -7,7 +7,7 @@ Compare rendered components to Figma screenshots. Fix until visual diff ≤ 5%.
 - Dev server running (started in step 3b)
 - Preview created (step 3b)
 - Figma screenshots captured
-- Bun installed (https://bun.sh)
+- Bun installed (step 1)
 
 ## Preview URL Format
 

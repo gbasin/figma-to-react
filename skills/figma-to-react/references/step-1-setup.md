@@ -5,11 +5,12 @@ Prepare the environment and install required tools.
 ## Install Tools
 
 ```bash
-# ImageMagick for visual comparison
+# Bun for fast TypeScript execution, ImageMagick for visual comparison
+command -v bun >/dev/null || brew install oven-sh/bun/bun
 brew install imagemagick
 
-# Playwright for screenshot capture
-pnpm add -D playwright && npx playwright install chromium
+# Playwright for screenshot capture, oxlint for fast linting
+pnpm add -D playwright oxlint && npx playwright install chromium
 ```
 
 ## Arm the Capture Hook
@@ -26,8 +27,10 @@ touch /tmp/figma-to-react/capture-active
 ## What This Does
 
 **Tool installations:**
+- Bun runs TypeScript scripts directly (faster than tsx/ts-node)
 - ImageMagick provides the `magick` CLI for image comparison (used in step 6)
 - Playwright enables headless screenshot capture of rendered components
+- oxlint for fast linting of generated components
 
 **Capture hook:**
 The PostToolUse hook watches for Figma MCP calls. When the marker file exists:

@@ -71,7 +71,7 @@ Task(
        This adds the component name to the dimensions already saved by the hook.
 
     5. Lint and auto-fix Tailwind issues:
-       npx eslint --fix {componentPath}
+       bun oxlint --fix {componentPath}
 
        This auto-fixes ~90% of MCP output issues:
        - Class ordering
@@ -80,7 +80,7 @@ Task(
        - Shorthand opportunities (top-X bottom-X → inset-y-X)
 
     6. Check for remaining issues:
-       npx eslint {componentPath}
+       bun oxlint {componentPath}
 
        Review any warnings that couldn't be auto-fixed:
        - Invalid classes (e.g., object-50%-50% → object-center)
@@ -88,7 +88,7 @@ Task(
 
        Fix these manually based on the component's intent.
 
-    7. Return summary: component path, asset count, eslint fixes applied, any errors.
+    7. Return summary: component path, asset count, oxlint fixes applied, any errors.
        (Dimensions are already in the metadata file.)
   """
 )

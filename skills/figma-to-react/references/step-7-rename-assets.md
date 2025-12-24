@@ -30,19 +30,28 @@ Apply renames? [Y/n/select]
 
 Use the rename-assets.sh script:
 ```bash
+# Single component
 $SKILL_DIR/scripts/rename-assets.sh \
   /tmp/figma-to-react/captures/figma-{nodeId}.txt \
   {assetDir} \
   {componentPath}
+
+# Directory of components (finds all .tsx files)
+$SKILL_DIR/scripts/rename-assets.sh \
+  /tmp/figma-to-react/captures/figma-{nodeId}.txt \
+  {assetDir} \
+  src/components/
+
+# Multiple component files
+$SKILL_DIR/scripts/rename-assets.sh \
+  /tmp/figma-to-react/captures/figma-{nodeId}.txt \
+  {assetDir} \
+  src/A.tsx src/B.tsx
 ```
 
-Or manually:
-1. Analyze each asset visually
-2. Generate descriptive name
-3. Rename file
-4. Update references in component
-
-The script handles atomic rename + reference update.
+The script has two phases:
+1. **Rename**: Parses MCP output for component descriptions, renames `asset-*.svg` to meaningful names
+2. **Dedup**: Merges identical assets (normalizes SVG ids before comparing), keeps shortest/best name
 
 ## Next Step
 
