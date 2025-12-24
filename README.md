@@ -20,10 +20,11 @@ A Claude Code plugin that converts Figma designs into pixel-perfect TypeScript R
 
 2. **React + Tailwind CSS project** — Vite, Next.js, or CRA
 
-3. **ImageMagick** (for visual validation):
-   ```bash
-   brew install imagemagick
-   ```
+3. **Tools** (auto-installed by the skill):
+   - **Bun** — Fast TypeScript runtime for scripts
+   - **ImageMagick** — Visual comparison (or `brew install imagemagick`)
+   - **oxlint** — Fast Tailwind linting (via Bun)
+   - **Playwright** — Headless screenshot capture
 
 ## Installation
 
@@ -79,7 +80,7 @@ process-figma.sh → extract tokens, download assets, transform code
      ↓
 fix-collapsed-containers.sh → add explicit dimensions where needed
      ↓
-eslint --fix → auto-fix ~90% of Tailwind issues
+bun oxlint --fix → auto-fix ~90% of Tailwind issues
 ```
 
 ### Visual Validation Loop
@@ -121,11 +122,15 @@ src/styles/
 |--------|---------|
 | `process-figma.sh` | Main processor: tokens, assets, code transform |
 | `extract-tokens.sh` | Parse CSS variables from MCP output |
-| `validate-component.sh` | Orchestrate single validation pass |
+| `fix-collapsed-containers.sh` | Add explicit dimensions to collapsing containers |
+| `validate-dimensions-coverage.sh` | Check if all collapse-prone elements have dimensions |
+| `add-missing-dimensions.sh` | Add user-provided dimensions to metadata |
+| `validate-component.sh` | Orchestrate single validation pass (deterministic) |
 | `validate-visual.sh` | ImageMagick RMSE comparison |
 | `capture-screenshot.ts` | Playwright headless capture |
-| `fix-collapsed-containers.sh` | Add dimensions to collapsing containers |
-| `rename-assets.sh` | Semantic asset naming from descriptions |
+| `save-component-metadata.sh` | Link component names to nodeIds |
+| `rename-assets.sh` | Semantic asset naming + deduplication |
+| `find-shared-components.ts` | Detect shared components across multiple screens |
 
 ## Hooks
 
@@ -179,19 +184,22 @@ Tests use captured Figma responses from the Onfido Web SDK Community file:
 ├── skills/figma-to-react/
 │   ├── SKILL.md              # Skill definition
 │   ├── references/           # Step guides (1-8, 3b, 4b)
-│   ├── scripts/              # Shell & TS processors
-│   └── hooks/                # PostToolUse hooks
+│   ├── scripts/              # Shell & TS processors + hook scripts
+│   └── templates/            # Preview route templates
+├── hooks/
+│   └── hooks.json            # Hook configuration (matchers → scripts)
 ├── tests/e2e/
 │   ├── fixtures/             # Captured MCP responses
 │   └── *.test.ts             # Test suites
-└── hooks.json                # Hook configuration
+└── .claude-plugin/
+    └── plugin.json           # Plugin manifest
 ```
 
 ## Troubleshooting
 
 **Hooks not working?**
 - Restart Claude Code after installation
-- Check `hooks.json` exists at project root
+- Check `hooks/hooks.json` exists and has correct matchers
 
 **Visual validation failing?**
 - Install ImageMagick: `brew install imagemagick`

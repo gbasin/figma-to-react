@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/garybasin/Documents/GitHub/figma-to-react/skills/figma-to-react/hooks/capture-figma-screenshot.sh"
+            "command": "/Users/garybasin/Documents/GitHub/figma-to-react/skills/figma-to-react/scripts/capture-figma-screenshot.sh"
           }
         ]
       }
