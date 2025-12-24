@@ -18,8 +18,12 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { execSync } from 'child_process';
 import { startDevServer, stopDevServer, waitForServer, getDevServerPort } from './utils/dev-server';
-import { resetTestProject, cleanTmpDir, isImageMagickAvailable, getTmpDir } from './utils/cleanup';
+import { resetTestProject, cleanTmpDir, isImageMagickAvailable, isPlaywrightAvailable, getTmpDir } from './utils/cleanup';
 import { TEST_PROJECT_DIR } from './setup';
+
+// Check tool availability for tests that require them
+const hasImageMagick = isImageMagickAvailable();
+const hasPlaywright = isPlaywrightAvailable();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,8 +137,8 @@ describeIf('Figma Integration Tests (requires Figma MCP)', () => {
   });
 });
 
-// Always run these tests (no Figma needed)
-describe('Preview Wrapper Dimension Tests', () => {
+// These tests require Playwright and ImageMagick
+describe.skipIf(!hasPlaywright || !hasImageMagick)('Preview Wrapper Dimension Tests', () => {
   afterAll(async () => {
     await stopDevServer();
   });
