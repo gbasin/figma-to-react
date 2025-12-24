@@ -23,15 +23,14 @@ const TMP_DIR = '/tmp/figma-to-react';
 
 describe('Preview Route Templates', () => {
   it('Vite template should exist and be valid TypeScript', async () => {
-    const templatePath = path.join(TEMPLATES_DIR, 'FigmaPreview.vite.tsx');
+    const templatePath = path.join(TEMPLATES_DIR, 'figma-preview-entry.vite.tsx');
     expect(await fs.pathExists(templatePath)).toBe(true);
 
     const content = await fs.readFile(templatePath, 'utf-8');
 
     // Should have required imports
-    expect(content).toContain("import { Suspense, useEffect, useState }");
-    expect(content).toContain("import { useSearchParams }");
-    expect(content).toContain("from 'react-router-dom'");
+    expect(content).toContain("Suspense, useEffect, useState");
+    expect(content).toContain("from 'react'");
 
     // Should use import.meta.glob for dynamic imports
     expect(content).toContain('import.meta.glob');
@@ -51,7 +50,7 @@ describe('Preview Route Templates', () => {
   });
 
   it('Next.js template should exist and be valid TypeScript', async () => {
-    const templatePath = path.join(TEMPLATES_DIR, 'FigmaPreview.nextjs.tsx');
+    const templatePath = path.join(TEMPLATES_DIR, 'figma-preview.nextjs-pages.tsx');
     expect(await fs.pathExists(templatePath)).toBe(true);
 
     const content = await fs.readFile(templatePath, 'utf-8');
@@ -60,8 +59,8 @@ describe('Preview Route Templates', () => {
     expect(content).toContain("'use client'");
 
     // Should have required imports
-    expect(content).toContain("import { Suspense, useEffect, useState }");
-    expect(content).toContain("from 'next/navigation'");
+    expect(content).toContain("Suspense, useEffect, useState");
+    expect(content).toContain("from 'next/router'");
 
     // Should fetch screens from API route
     expect(content).toContain("fetch('/api/figma-screens')");
@@ -315,8 +314,8 @@ describe('Step File References', () => {
     const content = await fs.readFile(stepPath, 'utf-8');
 
     // Should reference the template files
-    expect(content).toContain('FigmaPreview.vite.tsx');
-    expect(content).toContain('FigmaPreview.nextjs.tsx');
+    expect(content).toContain('figma-preview-entry.vite.tsx');
+    expect(content).toContain('figma-preview.nextjs-pages.tsx');
     expect(content).toContain('figma-screens-api.nextjs.ts');
 
     // Should mention copying templates
@@ -354,8 +353,8 @@ describe('Step File References', () => {
     expect(content).toContain('/figma-preview');
   });
 
-  it('step-4b-validate-dimensions.md should mention using preview', async () => {
-    const stepPath = path.join(SKILL_DIR, 'references', 'step-4b-validate-dimensions.md');
+  it('step-4c-validate-dimensions.md should mention using preview', async () => {
+    const stepPath = path.join(SKILL_DIR, 'references', 'step-4c-validate-dimensions.md');
     expect(await fs.pathExists(stepPath)).toBe(true);
 
     const content = await fs.readFile(stepPath, 'utf-8');
