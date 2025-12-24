@@ -264,7 +264,8 @@ describe('figma-to-react Skill E2E', () => {
         'step-3-confirm-config.md',
         'step-3b-preview-route.md',
         'step-4-generation.md',
-        'step-4b-validate-dimensions.md',
+        'step-4b-shared-components.md',
+        'step-4c-validate-dimensions.md',
         'step-5-import-tokens.md',
         'step-6-validation.md',
         'step-7-rename-assets.md',
@@ -278,7 +279,7 @@ describe('figma-to-react Skill E2E', () => {
     });
 
     it('should have hooks configuration', async () => {
-      const hooksPath = path.resolve(SKILL_DIR, '../../hooks.json');
+      const hooksPath = path.resolve(SKILL_DIR, '../../hooks/hooks.json');
       expect(await fs.pathExists(hooksPath)).toBe(true);
 
       const hooks = await fs.readJson(hooksPath);

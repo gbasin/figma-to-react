@@ -1,4 +1,4 @@
-# Step 4b: Validate Dimension Coverage
+# Step 4c: Validate Dimension Coverage
 
 Check that all collapse-prone elements have dimensions in the metadata. Prompt user for any missing values.
 
