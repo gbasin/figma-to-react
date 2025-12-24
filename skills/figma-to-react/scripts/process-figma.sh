@@ -261,6 +261,17 @@ if [ -f "$DIMENSIONS_FILE" ] && [ -x "$SCRIPT_DIR/fix-collapsed-containers.sh" ]
   mv "$TEMP_CODE.fixed" "$TEMP_CODE"
 fi
 
+# Step 3.6: Fix component instance dimensions
+# Component usages like <NavigationBar/> don't have data-node-id, so their
+# instance dimensions are lost. This step matches them by parent context + name.
+INSTANCES_FILE="/tmp/figma-to-react/metadata/${NODE_ID}-instances.json"
+if [ -f "$INSTANCES_FILE" ] && [ -x "$SCRIPT_DIR/fix-component-instances.sh" ]; then
+  echo "" >&2
+  echo "Step 3.6: Fixing component instance dimensions..." >&2
+  "$SCRIPT_DIR/fix-component-instances.sh" "$TEMP_CODE" "$INSTANCES_FILE" > "$TEMP_CODE.fixed"
+  mv "$TEMP_CODE.fixed" "$TEMP_CODE"
+fi
+
 # Step 4: Inject dimension export for preview route
 # Components export figmaDimensions so preview can set container size
 if [ -n "$FRAME_WIDTH" ] && [ -n "$FRAME_HEIGHT" ]; then

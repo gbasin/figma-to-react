@@ -112,7 +112,62 @@ done | paste -sd ',' - | sed 's/^/{/;s/$/}/' > "$DIMENSIONS_FILE"
 
 # Count how many dimensions we extracted
 DIM_COUNT=$(grep -c '"w":' "$DIMENSIONS_FILE" 2>/dev/null || echo "0")
-echo "✓ Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT} (+${DIM_COUNT} child nodes)" >&2
+
+# ============================================================================
+# Extract parent-child instance mapping for fix-component-instances.sh
+# Format: {"parentId": [{"id": "...", "name": "...", "type": "instance", "w": X, "h": Y}, ...]}
+# ============================================================================
+INSTANCES_FILE="${METADATA_DIR}/${SAFE_NODE_ID}-instances.json"
+
+# Parse XML to build parent-child structure using temp file for parent stack
+TEMP_STACK=$(mktemp)
+echo "root" > "$TEMP_STACK"
+
+echo "$XML_CONTENT" | while IFS= read -r line; do
+  # Count leading spaces to determine depth
+  spaces=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+  spaces=$((spaces - 1))
+  depth=$((spaces / 2))
+
+  # Extract element type (frame, instance, text)
+  type=""
+  if echo "$line" | grep -q '<frame '; then type="frame"; fi
+  if echo "$line" | grep -q '<instance '; then type="instance"; fi
+  if echo "$line" | grep -q '<text '; then type="text"; fi
+  [ -z "$type" ] && continue
+
+  # Extract id, name, dimensions
+  id=$(echo "$line" | grep -oE 'id="[^"]+"' | sed 's/id="//;s/"//')
+  name=$(echo "$line" | grep -oE 'name="[^"]+"' | sed 's/name="//;s/"//')
+  w=$(echo "$line" | grep -oE 'width="[0-9.]+"' | grep -oE '[0-9.]+')
+  h=$(echo "$line" | grep -oE 'height="[0-9.]+"' | grep -oE '[0-9.]+')
+  # Round decimals to integers (matching dimensions map behavior)
+  w=${w:+$(printf "%.0f" "$w")}
+  h=${h:+$(printf "%.0f" "$h")}
+
+  [ -z "$id" ] && continue
+
+  # Get parent from line (depth+1) in stack file
+  parent_id=$(sed -n "$((depth + 1))p" "$TEMP_STACK")
+
+  # Update stack: keep lines up to depth+1, add new id
+  head -n $((depth + 1)) "$TEMP_STACK" > "${TEMP_STACK}.tmp"
+  echo "$id" >> "${TEMP_STACK}.tmp"
+  mv "${TEMP_STACK}.tmp" "$TEMP_STACK"
+
+  # Output JSON line for jq to process
+  echo "{\"parent\": \"$parent_id\", \"id\": \"$id\", \"name\": \"$name\", \"type\": \"$type\", \"w\": ${w:-0}, \"h\": ${h:-0}}"
+done | jq -s 'group_by(.parent) | map({(.[0].parent): [.[] | del(.parent)]}) | add // {}' > "$INSTANCES_FILE"
+
+rm -f "$TEMP_STACK" "${TEMP_STACK}.tmp" 2>/dev/null
+
+# Validate JSON (fix if empty or malformed)
+if ! jq empty "$INSTANCES_FILE" 2>/dev/null; then
+  echo '{}' > "$INSTANCES_FILE"
+fi
+
+INSTANCE_COUNT=$(jq 'to_entries | map(.value | length) | add // 0' "$INSTANCES_FILE" 2>/dev/null || echo "0")
+echo "✓ Captured dimensions for $NODE_ID: ${WIDTH}x${HEIGHT} (+${DIM_COUNT} child nodes, ${INSTANCE_COUNT} instances)" >&2
 
 # Output JSON for hook system
 echo '{}'
