@@ -477,10 +477,12 @@ describe('Shared + Validate Integration', () => {
     const validateData = JSON.parse(validateResult);
 
     // Should report the unique element as missing (critical)
-    expect(validateData.critical_missing).toBe(1);
+    // The script outputs total_critical_missing at root level for multi-file support
+    expect(validateData.total_critical_missing).toBe(1);
 
     // Should NOT include the shared exit button instances in missing
-    const missingIds = validateData.missing?.map((m: { id: string }) => m.id) || [];
+    // Missing IDs are nested under files[0].missing for multi-file support
+    const missingIds = validateData.files?.[0]?.missing?.map((m: { id: string }) => m.id) || [];
     expect(missingIds).not.toContain('I237:2417;2708:1961');
     expect(missingIds).not.toContain('I237:2572;2708:1961');
 
